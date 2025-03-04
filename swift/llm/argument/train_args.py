@@ -39,6 +39,9 @@ class Seq2SeqTrainingOverrideArguments(Seq2SeqTrainingArguments):
 
     logging_first_step: bool = True
 
+    power: int = field(default=2)
+    sim_margin: bool = field(default=True)
+
     def _init_output_dir(self):
         if self.output_dir is not None:
             return

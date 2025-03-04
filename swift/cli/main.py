@@ -12,6 +12,7 @@ logger = get_logger()
 ROUTE_MAPPING: Dict[str, str] = {
     'pt': 'swift.cli.pt',
     'sft': 'swift.cli.sft',
+    'sft_vord': 'swift.cli.sft_vord',
     'infer': 'swift.cli.infer',
     'merge-lora': 'swift.cli.merge_lora',
     'web-ui': 'swift.cli.web_ui',
@@ -62,7 +63,7 @@ def cli_main() -> None:
     file_path = importlib.util.find_spec(ROUTE_MAPPING[method_name]).origin
     torchrun_args = get_torchrun_args()
     python_cmd = sys.executable
-    if torchrun_args is None or method_name not in {'pt', 'sft', 'rlhf', 'infer'}:
+    if torchrun_args is None or method_name not in {'pt', 'sft', 'sft_vord', 'rlhf', 'infer'}:
         args = [python_cmd, file_path, *argv]
     else:
         args = [python_cmd, '-m', 'torch.distributed.run', *torchrun_args, file_path, *argv]

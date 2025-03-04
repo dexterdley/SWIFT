@@ -107,4 +107,6 @@ class TrainingArguments(SwiftArgumentsMixin, HfTrainingArguments):
 
 @dataclass
 class Seq2SeqTrainingArguments(SwiftArgumentsMixin, HfSeq2SeqTrainingArguments):
+    power: int = 2
+    sim_margin: bool = True
     pass

@@ -9,13 +9,17 @@ MODEL_DIR="./checkpoints/deepseek-vl-7b-finetune-vord1/v0-20250228-162922/checkp
 # --model deepseek-ai/deepseek-vl-7b-chat \
 # --model swift/llava-v1.6-vicuna-7b-hf \
 # --ckpt_dir checkpoints/deepseek-vl-7b-finetune/v0-20250221-215854/checkpoint-28986/\
-echo $MODEL_DIR
 
-for DATASET in MME POPE
+for MODEL_DIR in ./checkpoints/deepseek-vl-7b-finetune-base/v0-20250303-211235/checkpoint-9662/ ./checkpoints/deepseek-vl-7b-finetune-vord1-max/v0-20250304-034307/checkpoint-9662
 do
-    CUDA_VISIBLE_DEVICES=0 \
-    swift eval \
-        --model deepseek-ai/deepseek-vl-7b-chat \
-        --eval_dataset $DATASET \
-        --ckpt_dir $MODEL_DIR
+    echo $MODEL_DIR
+
+    for DATASET in MME #POPE
+    do
+        CUDA_VISIBLE_DEVICES=0 \
+        swift eval \
+            --model deepseek-ai/deepseek-vl-7b-chat \
+            --eval_dataset $DATASET \
+            --ckpt_dir $MODEL_DIR
+    done
 done

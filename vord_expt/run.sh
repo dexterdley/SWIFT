@@ -1,6 +1,6 @@
 ################## SWIFT ##################
 SIZE="7b"
-MODEL_NAME="deepseek-vl-${SIZE}-finetune-vord2-max"
+MODEL_NAME="deepseek-vl-${SIZE}-finetune-vord1-max"
 MODEL_DIR="./checkpoints/$MODEL_NAME"
 ################## SWIFT ##################
 
@@ -19,7 +19,7 @@ swift sft_vord \
     --output_dir $MODEL_DIR \
     --num_train_epochs 1 \
     --save_steps 10000 \
-    --power 2 \
+    --power 1 \
     --sim_margin True \
     --gradient_checkpointing_kwargs '{"use_reentrant": false}' \
     # --deepspeed zero2

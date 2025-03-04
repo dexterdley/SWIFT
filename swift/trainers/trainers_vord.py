@@ -239,22 +239,23 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             # Here
             logits, cd_logits = outputs['logits'], cd_outputs['logits']
             probs, cd_probs = F.softmax(logits, 1), F.softmax(cd_logits, 1)
-            # mask = torch.where(inputs['labels'] == -100)
+            mask = torch.where(inputs['labels'] == -100)
 
             if self.args.sim_margin:  # Maybe try max vocab variant
                 # vord_loss = torch.mean(
                 #    F.relu(cd_probs - probs).pow(self.args.power).sum(2).mean(1)
                 #    + angular_similarity_margin
                 # )
-                vord_loss = torch.mean(
-                    F.relu( cd_probs.max(2).values - probs.max(2).values
-                    + angular_similarity_margin.unsqueeze(1)
-                    ).pow(self.args.power))
-
+                # vord_loss = torch.mean(
+                #   F.relu( cd_probs.max(2).values - probs.max(2).values
+                #   + angular_similarity_margin.unsqueeze(1)
+                #   ).pow(self.args.power))
+                vord_loss = F.relu( cd_probs.max(2).values - probs.max(2).values + angular_similarity_margin.unsqueeze(1)).pow(self.args.power)
+                vord_loss = vord_loss[mask].mean()
             else:
                 vord_loss = F.relu(cd_probs - probs).pow(self.args.power).sum(2).mean()  # L1 or L2 variant with margins
 
-            # print(loss.item(), vord_loss.item())
+            print(loss.item(), vord_loss.item())
             loss += vord_loss
 
             if torch.isnan(loss).any() or torch.isnan(vord_loss).any():
