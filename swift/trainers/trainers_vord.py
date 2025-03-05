@@ -204,23 +204,24 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
         else:
             ViT = unwrapped_model.model.vision_model
 
+        # Here
+        rand_p = np.random.uniform()
+        if rand_p < 0.5:
+            images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=500)
+        else:
+            images_cd, _ = mixup_process(inputs['pixel_values'])
+
+        cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
+        
         with torch.no_grad():
-            clean_feats = ViT(inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
-
-            rand_p = np.random.uniform()
-            if rand_p < 0.5:
-                images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=500)
-            else:
-                images_cd, _ = mixup_process(inputs['pixel_values'])
-
-            cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
             cd_outputs = model(**cd_inputs)  # forward mixed images
+            clean_feats = ViT(inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
             cd_feats = ViT(cd_inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
 
             cosine_similarity = cosine_sim(torch.vstack(clean_feats).mean(1), torch.vstack(cd_feats).mean(1)).clamp(-1, 1)
             angular_similarity_margin = torch.acos(cosine_similarity) / torch.tensor(np.pi).cuda()
 
-            if len(angular_similarity_margin) > BS:  # For deepseek high and low heads
+            if "deepseek" in self.args.output_dir: # For deepseek high and low heads
                 angular_similarity_margin = (angular_similarity_margin[:BS] + angular_similarity_margin[BS:]) / 2
 
         if labels is None:
@@ -246,16 +247,22 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
                 #    F.relu(cd_probs - probs).pow(self.args.power).sum(2).mean(1)
                 #    + angular_similarity_margin
                 # )
-                # vord_loss = torch.mean(
-                #   F.relu( cd_probs.max(2).values - probs.max(2).values
-                #   + angular_similarity_margin.unsqueeze(1)
-                #   ).pow(self.args.power))
-                vord_loss = F.relu( cd_probs.max(2).values - probs.max(2).values + angular_similarity_margin.unsqueeze(1)).pow(self.args.power)
+
+                max_indices = torch.argmax(probs, dim=2, keepdim=True)  # Find argmax along vocab
+                max_cd_probs = torch.gather(cd_probs, dim=2, index=max_indices).squeeze(-1)
+
+                vord_loss = F.relu( max_cd_probs - probs.max(2).values
+                   + angular_similarity_margin.unsqueeze(1)
+                   ).pow(self.args.power)
                 vord_loss = vord_loss[mask].mean()
             else:
                 vord_loss = F.relu(cd_probs - probs).pow(self.args.power).sum(2).mean()  # L1 or L2 variant with margins
 
-            print(loss.item(), vord_loss.item())
+            vord_out = F.relu(max_cd_probs - probs.max(2).values)[mask].mean()
+
+            #print(loss.item(), vord_loss.item())
+            self.state.xent_loss = loss
+            self.state.vord_loss = vord_out
             loss += vord_loss
 
             if torch.isnan(loss).any() or torch.isnan(vord_loss).any():
