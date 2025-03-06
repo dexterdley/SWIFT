@@ -25,7 +25,7 @@ do
             --gradient_checkpointing True \
             --output_dir $MODEL_DIR \
             --num_train_epochs 1 \
-            --save_steps 20000 \
+            --save_steps 1000 \
             --power $PSI \
             --sim_margin True \
             --logging_dir ./runs/$MODEL_NAME \

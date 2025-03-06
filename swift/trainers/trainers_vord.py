@@ -22,8 +22,8 @@ from .arguments import Seq2SeqTrainingArguments, TrainingArguments
 from .mixin_vord import SwiftMixinVORD
 from .torchacc_mixin import TorchAccMixin
 
-np.random.seed(0)
 cosine_sim = nn.CosineSimilarity(dim=1, eps=1e-6)
+np.random.seed(0)
 
 def mixup_process(x, mixup_alpha=1.0):
 
@@ -205,6 +205,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             ViT = unwrapped_model.model.vision_model
 
         # Here
+        np.random.seed(0)
         rand_p = np.random.uniform()
         if rand_p < 0.5:
             images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=500)
@@ -221,7 +222,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             cosine_similarity = cosine_sim(torch.vstack(clean_feats).mean(1), torch.vstack(cd_feats).mean(1)).clamp(-1, 1)
             angular_similarity_margin = torch.acos(cosine_similarity) / torch.tensor(np.pi).cuda()
 
-            if "deepseek" in self.args.output_dir: # For deepseek high and low heads
+            if len(angular_similarity_margin) > BS: # For deepseek high and low heads
                 angular_similarity_margin = (angular_similarity_margin[:BS] + angular_similarity_margin[BS:]) / 2
 
         if labels is None:
@@ -258,7 +259,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             else:
                 vord_loss = F.relu(cd_probs - probs).pow(self.args.power).sum(2).mean()  # L1 or L2 variant with margins
 
-            vord_out = F.relu(max_cd_probs - probs.max(2).values)[mask].mean()
+            vord_out = F.relu(max_cd_probs - probs.max(2).values + angular_similarity_margin.unsqueeze(1))[mask].mean()
 
             #print(loss.item(), vord_loss.item())
             self.state.xent_loss = loss
