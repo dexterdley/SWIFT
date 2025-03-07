@@ -25,21 +25,18 @@ from .torchacc_mixin import TorchAccMixin
 cosine_sim = nn.CosineSimilarity(dim=1, eps=1e-6)
 np.random.seed(0)
 
-def mixup_process(x, mixup_alpha=1.0):
+def mixup_process(x, y, mixup_alpha=1.0):
 
     B = x.shape[0]
     indices = np.random.permutation(x.size(0))
 
     if mixup_alpha == 1.0:
-        lam = 0.5 * torch.rand((B, 1, 1, 1, 1)).to('cuda')  # alpha=1 for beta distribution, max probs clipped to 0.5
-
-    elif mixup_alpha > 0.0 and mixup_alpha != 1.0:
-        lam = torch.distributions.Beta(mixup_alpha, mixup_alpha).sample((B, 1, 1, 1)).to('cuda')
+        lam = torch.distributions.Beta(mixup_alpha, mixup_alpha).sample((B, 1, 1, 1, 1)).to('cuda')
     else:
         lam = 1.0
-
     x_mix = x * lam + x[indices] * (1 - lam)
-    return x_mix, lam
+    y_mix = y * lam.reshape(B, 1) + y[indices] * (1 - lam.reshape(B, 1))
+    return x_mix, y_mix, lam
 
 
 def add_diffusion_noise(image_tensor, noise_step):
@@ -205,12 +202,11 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             ViT = unwrapped_model.model.vision_model
 
         # Here
-        np.random.seed(0)
         rand_p = np.random.uniform()
         if rand_p < 0.5:
-            images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=500)
+            images_cd, labels_cd, lam = mixup_process(inputs['pixel_values'], inputs['labels'])
         else:
-            images_cd, _ = mixup_process(inputs['pixel_values'])
+            images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=500)
 
         cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
         
@@ -242,29 +238,31 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             logits, cd_logits = outputs['logits'], cd_outputs['logits']
             probs, cd_probs = F.softmax(logits, 1), F.softmax(cd_logits, 1)
             mask = torch.where(inputs['labels'] == -100)
+            if rand_p < 0.5:
+                mixed_mask = torch.where(labels_cd < 0)
 
-            if self.args.sim_margin:  # Maybe try max vocab variant
-                # vord_loss = torch.mean(
-                #    F.relu(cd_probs - probs).pow(self.args.power).sum(2).mean(1)
-                #    + angular_similarity_margin
-                # )
+            max_indices = torch.argmax(probs, dim=2, keepdim=True)  # Find argmax along vocab
+            max_cd_probs = torch.gather(cd_probs, dim=2, index=max_indices).squeeze(-1)
 
-                max_indices = torch.argmax(probs, dim=2, keepdim=True)  # Find argmax along vocab
-                max_cd_probs = torch.gather(cd_probs, dim=2, index=max_indices).squeeze(-1)
-
-                vord_loss = F.relu( max_cd_probs - probs.max(2).values
-                   + angular_similarity_margin.unsqueeze(1)
-                   ).pow(self.args.power)
-                vord_loss = vord_loss[mask].mean()
+            if self.args.sim_margin:  # Max vocab variant
+                vord_loss = F.relu(max_cd_probs - probs.max(2).values + angular_similarity_margin.unsqueeze(1)).pow(self.args.power)
             else:
-                vord_loss = F.relu(cd_probs - probs).pow(self.args.power).sum(2).mean()  # L1 or L2 variant with margins
+                vord_loss = F.relu(max_cd_probs - probs.max(2).values).pow(self.args.power)  # L1 or L2 variant with margins
+
+            if rand_p < 0.5:
+                vord_loss = vord_loss[mixed_mask].mean()
+            else:
+                vord_loss = vord_loss[mask].mean()
 
             vord_out = F.relu(max_cd_probs - probs.max(2).values + angular_similarity_margin.unsqueeze(1))[mask].mean()
-
             #print(loss.item(), vord_loss.item())
             self.state.xent_loss = loss
             self.state.vord_loss = vord_out
-            loss += vord_loss
+                
+            if self.args.power > 0:
+                loss += vord_loss
+            else:
+                pass
 
             if torch.isnan(loss).any() or torch.isnan(vord_loss).any():
                 pdb.set_trace()

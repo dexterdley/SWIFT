@@ -7,13 +7,13 @@ MODEL_DIR="./checkpoints/deepseek-vl-7b-finetune-vord1/v0-20250228-162922/checkp
 # --model deepseek-ai/deepseek-vl-7b-chat \
 # --model swift/llava-v1.6-vicuna-7b-hf \
 
-for MODEL_DIR in ./checkpoints/deepseek-vl-7b-finetune-vord1-max/v1-20250304-140010/checkpoint-9662/ ./checkpoints/deepseek-vl-7b-finetune-vord2-max/v0-20250304-232326/checkpoint-9662/
+for MODEL_DIR in ./checkpoints/deepseek-vl-7b-finetune-vord1-max/v0-20250306-115606/checkpoint-9662/ ./checkpoints/deepseek-vl-7b-finetune-vord2-max/v1-20250306-210746/checkpoint-9662/
 do
     echo $MODEL_DIR
 
-    for DATASET in MME
+    for DATASET in BLINK
     do
-        CUDA_VISIBLE_DEVICES=0 \
+        CUDA_VISIBLE_DEVICES=1 \
         swift eval \
             --model deepseek-ai/deepseek-vl-7b-chat \
             --eval_dataset $DATASET \
