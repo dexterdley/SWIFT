@@ -7,7 +7,7 @@ MODEL_DIR="./checkpoints/$MODEL_NAME"
 ################## SWIFT ##################
 # cp ~/SWIFT/checkpoints/deepseek-vl-7b-finetune-base/v0-20250303-211235/runs/base/ ./checkpoints/deepseek-vl-7b-finetune-vord1-max/v0-20250304-034307/runs/
 
-for PSI in 0 1 2
+for PSI in 1 2
 do
     MODEL_NAME="deepseek-vl-${SIZE}-finetune-vord${PSI}-max-mix"
     MODEL_DIR="./checkpoints/$MODEL_NAME"

@@ -12,7 +12,8 @@ do
 
     echo "Training ${MODEL_NAME}"
 
-        CUDA_VISIBLE_DEVICES=0 \
+        CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
+        NPROC_PER_NODE=8 \
         swift sft_vord \
             --model deepseek-ai/deepseek-vl-7b-chat \
             --dataset AI-ModelScope/LLaVA-Instruct-150K \
@@ -26,5 +27,5 @@ do
             --power $PSI \
             --sim_margin True \
             --logging_dir ./runs/$MODEL_NAME \
-            # --deepspeed zero2
+            --deepspeed zero2
 done
