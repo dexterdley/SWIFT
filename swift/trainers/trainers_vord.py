@@ -250,11 +250,12 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             vord_out = F.relu(max_cd_probs - probs.max(2).values + angular_similarity_margin.unsqueeze(1))[mask].mean()
             
             #print(loss.item(), vord_loss.item())
+            #pdb.set_trace()
             self.state.xent_loss = loss
             self.state.vord_loss = vord_out
                 
             if self.args.power > 0:
-                loss += vord_loss
+                loss += 10 * vord_loss
             else:
                 pass
 
