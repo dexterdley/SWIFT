@@ -6,7 +6,7 @@ SIZE="7b"
 #--model swift/llava-v1.6-vicuna-7b-hf \
 #--model AI-ModelScope/llava-onevision-qwen2-0.5b-ov-hf \
 
-for PSI in 0 2
+for PSI in 1 2
 do
     MODEL_NAME="AI-ModelScope/llava-onevision-qwen2-0.5b-ov-hf${PSI}-debug"
     MODEL_DIR="./checkpoints/$MODEL_NAME"

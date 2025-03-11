@@ -203,10 +203,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
 
         # Here
         rand_p = np.random.uniform()
-        if rand_p < 0.5:
-            images_cd, _, _ = mixup_process(inputs['pixel_values'], inputs['labels'])
-        else:
-            images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=500)
+        images_cd, _, lam = mixup_process(inputs['pixel_values'], inputs['labels'])
         cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
         
         with torch.no_grad():
@@ -236,26 +233,28 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             # Here
             logits, cd_logits = outputs['logits'], cd_outputs['logits']
             probs, cd_probs = F.softmax(logits, 1), F.softmax(cd_logits, 1)
-            mask = torch.where(inputs['labels'] == -100)
+            mask = torch.where(inputs['labels'] != -100)
 
             max_indices = torch.argmax(probs, dim=2, keepdim=True)  # Find argmax along vocab
             max_cd_probs = torch.gather(cd_probs, dim=2, index=max_indices).squeeze(-1)
 
             if self.args.sim_margin:  # Max vocab, L1 or L2 variant with margins
-                vord_loss = F.relu(max_cd_probs - probs.max(2).values + angular_similarity_margin.unsqueeze(1)).pow(self.args.power)
+                vord_loss = F.relu(max_cd_probs - probs.max(2).values ).pow(self.args.power)
             else:
                 vord_loss = F.relu(max_cd_probs - probs.max(2).values).pow(self.args.power)
 
             vord_loss = vord_loss[mask].mean()
-            vord_out = F.relu(max_cd_probs - probs.max(2).values + angular_similarity_margin.unsqueeze(1))[mask].mean()
+            vord_out = F.relu(max_cd_probs - probs.max(2).values )[mask].mean()
             
-            #print(loss.item(), vord_loss.item())
-            #pdb.set_trace()
+            # pure_vord = F.relu(max_cd_probs - probs.max(2).values)
+            # print(loss.item(), vord_loss.item())
+            # print(pure_vord.sum(), pure_vord[mask].mean())
+            # pdb.set_trace()
             self.state.xent_loss = loss
             self.state.vord_loss = vord_out
                 
             if self.args.power > 0:
-                loss += 10 * vord_loss
+                loss += vord_loss
             else:
                 pass
 
