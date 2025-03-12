@@ -35,8 +35,8 @@ def mixup_process(x, y, mixup_alpha=1.0):
     else:
         lam = 1.0
     x_mix = x * lam + x[indices] * (1 - lam)
-    y_mix = y * lam.reshape(B, 1) + y[indices] * (1 - lam.reshape(B, 1))
-    return x_mix, y_mix, lam
+    # y_mix = y * lam.reshape(B, 1) + y[indices] * (1 - lam.reshape(B, 1))
+    return x_mix, lam
 
 
 def add_diffusion_noise(image_tensor, noise_step):
@@ -203,7 +203,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
 
         # Here
         rand_p = np.random.uniform()
-        images_cd, _, lam = mixup_process(inputs['pixel_values'], inputs['labels'])
+        images_cd, lam = mixup_process(inputs['pixel_values'], inputs['labels'])
         cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
         
         with torch.no_grad():

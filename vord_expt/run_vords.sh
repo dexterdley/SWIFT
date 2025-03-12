@@ -4,7 +4,7 @@ SIZE="7b"
 # --model swift/llava-v1.6-vicuna-7b-hf \
 MODEL_NAME="deepseek-vl-${SIZE}-finetune-base"
 MODEL_DIR="./checkpoints/$MODEL_NAME"
-DATASET="AI-ModelScope/captcha-images"
+DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 ################## SWIFT ##################
 # swift/ScienceQA
 for PSI in 0 1 2

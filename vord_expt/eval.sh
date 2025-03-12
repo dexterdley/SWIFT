@@ -8,8 +8,9 @@ MODEL_DIR="./checkpoints/deepseek-vl-7b-finetune-vord1/v0-20250228-162922/checkp
 # ./checkpoints/deepseek-vl-7b-finetune-vord1-max-mix/v0-20250308-035620/checkpoint-9662/
 # ./checkpoints/deepseek-vl-7b-finetune-vord2-max-mix/v0-20250308-130307/checkpoint-9662/
 
-for MODEL_DIR in ./checkpoints/deepseek-vl-7b-finetune-vord2-max-mix/v1-20250310-064047/checkpoint-9662/
+for MODEL in deepseek-vl-7b-finetune-vord0-max-mix/v0-20250311-215535
 do
+    MODEL_DIR="./checkpoints/AI-ModelScope/LLaVA-Instruct-150K/${MODEL}/checkpoint-9662/"
     echo $MODEL_DIR
 
     for DATASET in MME
