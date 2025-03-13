@@ -239,7 +239,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             max_cd_probs = torch.gather(cd_probs, dim=2, index=max_indices).squeeze(-1)
 
             if self.args.sim_margin:  # Max vocab, L1 or L2 variant with margins
-                vord_loss = F.relu(max_cd_probs - probs.max(2).values ).pow(self.args.power)
+                vord_loss = F.relu(max_cd_probs - probs.max(2).values + angular_similarity_margin.unsqueeze(1) ).pow(self.args.power)
             else:
                 vord_loss = F.relu(max_cd_probs - probs.max(2).values).pow(self.args.power)
 
