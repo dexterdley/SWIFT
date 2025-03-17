@@ -4,12 +4,13 @@ SIZE="7b"
 # --model swift/llava-v1.6-vicuna-7b-hf \
 MODEL_NAME="deepseek-vl-${SIZE}-finetune-base"
 MODEL_DIR="./checkpoints/$MODEL_NAME"
-DATASET="AI-ModelScope/LLaVA-Instruct-150K"
+DATASET="swift/llava-data"
+# DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 ################## SWIFT ##################
 # swift/ScienceQA
-for PSI in 2 1 0
+for PSI in 2 0 1
 do
-    MODEL_NAME="${DATASET}/deepseek-vl-${SIZE}-finetune-vord${PSI}-max-mix2-margin"
+    MODEL_NAME="${DATASET}/deepseek-vl-${SIZE}-finetune-vord${PSI}-margin"
     MODEL_DIR="./checkpoints/$MODEL_NAME"
 
     echo "Training ${MODEL_NAME}, ${DATASET}"
@@ -25,6 +26,7 @@ do
         --gradient_checkpointing True \
         --output_dir $MODEL_DIR \
         --num_train_epochs 1 \
+        --learning_rate 5e-5 \
         --save_steps 1000 \
         --power $PSI \
         --sim_margin True \

@@ -57,7 +57,8 @@ def cli_main(route_mapping: Optional[Dict[str, str]] = None) -> None:
     route_mapping = route_mapping or ROUTE_MAPPING
     argv = sys.argv[1:]
     _compat_web_ui(argv)
-    method_name = argv[0].replace('_', '-')
+    # method_name = argv[0].replace('_', '-')
+    method_name = argv[0]
     argv = argv[1:]
     file_path = importlib.util.find_spec(route_mapping[method_name]).origin
     torchrun_args = get_torchrun_args()

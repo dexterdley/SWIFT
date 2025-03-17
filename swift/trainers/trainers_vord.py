@@ -4,7 +4,7 @@ import os
 from contextlib import contextmanager, nullcontext
 from functools import wraps
 from typing import Any, Dict, List, Optional, Tuple, Union
-
+ 
 import torch
 import numpy as np
 import torch.nn.functional as F
@@ -26,18 +26,15 @@ cosine_sim = nn.CosineSimilarity(dim=1, eps=1e-6)
 np.random.seed(0)
 
 def mixup_process(x, y, mixup_alpha=1.0):
-
     B = x.shape[0]
     indices = np.random.permutation(x.size(0))
-
+ 
     if mixup_alpha == 1.0:
-        lam = 0.5 * torch.distributions.Beta(mixup_alpha, mixup_alpha).sample((B, 1, 1, 1, 1)).to('cuda')
+        lam = 0.25 * torch.distributions.Beta(mixup_alpha, mixup_alpha).sample((B, 1, 1, 1, 1)).to(x.device)
     else:
         lam = 1.0
     x_mix = x * lam + x[indices] * (1 - lam)
-    # y_mix = y * lam.reshape(B, 1) + y[indices] * (1 - lam.reshape(B, 1))
     return x_mix, lam
-
 
 def add_diffusion_noise(image_tensor, noise_step):
     num_steps = 1000  # Number of diffusion steps
@@ -61,7 +58,6 @@ def add_diffusion_noise(image_tensor, noise_step):
     noisy_image = image_tensor.clone()
     image_tensor_cd = q_x(noisy_image, noise_step)
     return image_tensor_cd
-
 
 class TrainerVORD(SwiftMixinVORD, HfTrainer):
     args: TrainingArguments
@@ -103,7 +99,6 @@ class TrainerVORD(SwiftMixinVORD, HfTrainer):
             loss /= self.args.gradient_accumulation_steps
         return (loss, outputs) if return_outputs else loss
 
-
 class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
     args: Seq2SeqTrainingArguments
 
@@ -137,12 +132,12 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
                 self.template.register_post_encode_hook([self.model])
             self.data_collator = origin_data_collator
             self.template.set_mode(origin_mode)
-
+ 
     def evaluate(self, *args, **kwargs):
         context = self._patch_predict_with_generate() if self.args.predict_with_generate else nullcontext()
         with context:
             return super().evaluate(*args, **kwargs)
-
+ 
     def prediction_step(
         self,
         model: nn.Module,
@@ -162,7 +157,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             RequestConfig(max_tokens=self.model.generation_config.max_new_tokens),
             use_tqdm=False,
             template=self.template)
-
+ 
         response_list = []
         device = self.args.device
         for data, resp, labels in zip(data_list, resp_list, labels_list):
@@ -202,10 +197,9 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             ViT = unwrapped_model.model.vision_model
 
         # Here
-        rand_p = np.random.uniform()
         images_cd, lam = mixup_process(inputs['pixel_values'], inputs['labels'])
         cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
-        
+
         with torch.no_grad():
             cd_outputs = model(**cd_inputs)  # forward mixed images
             clean_feats = ViT(inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
@@ -239,22 +233,23 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             max_cd_probs = torch.gather(cd_probs, dim=2, index=max_indices).squeeze(-1)
 
             if self.args.sim_margin:  # Max vocab, L1 or L2 variant with margins
-                vord_loss = F.relu(max_cd_probs - probs.max(2).values + angular_similarity_margin.unsqueeze(1) ).pow(self.args.power)
+                vord_loss = F.relu(max_cd_probs - probs.max(2).values + angular_similarity_margin.unsqueeze(1)).pow(self.args.power)
             else:
                 vord_loss = F.relu(max_cd_probs - probs.max(2).values).pow(self.args.power)
 
             vord_loss = vord_loss[mask].mean()
-            vord_out = F.relu(max_cd_probs - probs.max(2).values )[mask].mean()
-            
+            vord_out = F.relu(max_cd_probs - probs.max(2).values)[mask].mean()
+
+            #print(loss.item(), vord_loss.item())
             # pure_vord = F.relu(max_cd_probs - probs.max(2).values)
             # print(loss.item(), vord_loss.item())
             # print(pure_vord.sum(), pure_vord[mask].mean())
             # pdb.set_trace()
             self.state.xent_loss = loss
             self.state.vord_loss = vord_out
-                
+
             if self.args.power > 0:
-                loss += vord_loss
+                 loss += vord_loss
             else:
                 pass
 
@@ -279,7 +274,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
         if self.args.sequence_parallel_size > 1:
             from swift.trainers.xtuner import reduce_xtuner_sequence_parallel_loss
             loss = reduce_xtuner_sequence_parallel_loss(loss, labels)
-
+ 
         if getattr(self.args, 'average_tokens_across_devices', False):
             loss *= self.accelerator.num_processes
 
