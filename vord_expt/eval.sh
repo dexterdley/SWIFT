@@ -8,13 +8,13 @@ MODEL_DIR="./checkpoints/deepseek-vl-7b-finetune-vord1/v0-20250228-162922/checkp
 # deepseek-vl-7b-finetune-vord1-max-mix/v0-20250312-065804
 # deepseek-vl-7b-finetune-vord2-max-mix/v0-20250312-162700
 
-for MODEL in deepseek-vl-7b-finetune-vord0-max-mix/v0-20250311-215535 deepseek-vl-7b-finetune-vord1-max-mix/v0-20250312-065804 deepseek-vl-7b-finetune-vord2-max-mix/v0-20250312-162700/
+for MODEL in deepseek-vl-7b-finetune-vord2-max-mix1-margin-debug/v1-20250315-201154
 do
     MODEL_DIR="./checkpoints/AI-ModelScope/LLaVA-Instruct-150K/${MODEL}/checkpoint-9662/"
 
-    for DATASET in BLINK
+    for DATASET in MME POPE BLINK
     do
-        echo "Training ${MODEL_DIR}, ${DATASET}"
+        echo "EVALUATING: ${MODEL_DIR}, ${DATASET}"
 
         CUDA_VISIBLE_DEVICES=1 \
         swift eval \
