@@ -2,10 +2,11 @@
 from dataclasses import dataclass, field
 from typing import Optional
 
-from ..constant import LLMTemplateType
+from ..constant import LLMTemplateType, MLLMTemplateType
 from ..register import TemplateMeta, register_template
 from ..utils import Prompt
 from .llama import Llama3_2TemplateMeta
+from .qwen import Qwen2VLTemplate, QwenTemplateMeta
 from .utils import DEFAULT_SYSTEM, ChatmlTemplateMeta
 
 register_template(
@@ -28,6 +29,13 @@ register_template(
         system_prefix=[' \n\n<|system|>:{{SYSTEM}}'],
         default_system=DEFAULT_SYSTEM,
     ))
+
+register_template(
+    QwenTemplateMeta(
+        MLLMTemplateType.qwen2_gme,
+        template_cls=Qwen2VLTemplate,
+        placeholder_tokens=['<|image_pad|>', '<|video_pad|>'],
+        suffix=['<|endoftext|>']))
 
 register_template(
     TemplateMeta(LLMTemplateType.baichuan, prefix=['{{SYSTEM}}'], prompt=[[195], '{{QUERY}}', [196]], chat_sep=[]))
@@ -266,4 +274,14 @@ register_template(
         chat_sep=['<|im_end|>'],
         suffix=['<|im_end|>'],
         default_system='You are a helpful assistant',
+    ))
+
+register_template(
+    TemplateMeta(
+        LLMTemplateType.ling,
+        prefix=[],
+        system_prefix=['<role>SYSTEM</role>{{SYSTEM}}'],
+        prompt=['<role>HUMAN</role>{{QUERY}}<role>ASSISTANT</role>'],
+        chat_sep=[],
+        suffix=['<|endoftext|>'],
     ))

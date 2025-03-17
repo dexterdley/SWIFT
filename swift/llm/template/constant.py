@@ -12,6 +12,7 @@ class LLMTemplateType:
     qwen2_5 = 'qwen2_5'
     qwen2_5_math = 'qwen2_5_math'
     qwen2_5_math_prm = 'qwen2_5_math_prm'
+    qwq_preview = 'qwq_preview'
     qwq = 'qwq'
     marco_o1 = 'marco_o1'
     modelscope_agent = 'modelscope_agent'
@@ -66,9 +67,11 @@ class LLMTemplateType:
     wizardlm2 = 'wizardlm2'
     wizardlm2_moe = 'wizardlm2_moe'
     gemma = 'gemma'
+    gemma3_text = 'gemma3_text'
     phi3 = 'phi3'
     phi4 = 'phi4'
 
+    ling = 'ling'
     yuan = 'yuan'
     xverse = 'xverse'
     bluelm = 'bluelm'
@@ -90,6 +93,7 @@ class MLLMTemplateType:
     qwen2_vl = 'qwen2_vl'
     qwen2_5_vl = 'qwen2_5_vl'
     qwen2_audio = 'qwen2_audio'
+    qwen2_gme = 'qwen2_gme'
     qvq = 'qvq'
     ovis1_6 = 'ovis1_6'
     ovis1_6_llama3 = 'ovis1_6_llama3'
@@ -161,10 +165,12 @@ class MLLMTemplateType:
     pixtral = 'pixtral'
     paligemma = 'paligemma'
     phi3_vision = 'phi3_vision'
+    phi4_multimodal = 'phi4_multimodal'
     florence = 'florence'
     molmo = 'molmo'
     megrez_omni = 'megrez_omni'
     valley = 'valley'
+    gemma3_vision = 'gemma3_vision'
 
 
 class TemplateType(LLMTemplateType, MLLMTemplateType, RMTemplateType):
