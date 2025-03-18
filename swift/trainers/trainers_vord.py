@@ -30,9 +30,10 @@ def mixup_process(x, y, mixup_alpha=1.0):
     indices = np.random.permutation(x.size(0))
  
     if mixup_alpha == 1.0:
-        lam = 0.25 * torch.distributions.Beta(mixup_alpha, mixup_alpha).sample((B, 1, 1, 1, 1)).to(x.device)
+        lam = 0.5 * torch.distributions.Beta(mixup_alpha, mixup_alpha).sample((B, 1, 1, 1, 1)).to(x.device)
     else:
         lam = 1.0
+    lam = 0.5
     x_mix = x * lam + x[indices] * (1 - lam)
     return x_mix, lam
 
