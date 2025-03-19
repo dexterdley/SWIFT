@@ -13,22 +13,23 @@ do
 
     echo "Training ${MODEL_NAME}"
 
-        CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
-        NPROC_PER_NODE=8 \
-        swift sft_vord \
-            --model deepseek-ai/deepseek-vl-7b-chat \
-            --dataset swift/llava-instruct-mix-vsft \
-            --torch_dtype bfloat16 \
-            --per_device_train_batch_size 8 \
-            --per_device_eval_batch_size 1 \
-            --gradient_checkpointing True \
-            --output_dir $MODEL_DIR \
-            --num_train_epochs 1 \
-            --learning_rate 5e-5 \
-            --save_steps 1000 \
-            --power $PSI \
-            --sim_margin True \
-            --logging_dir ./runs/$MODEL_NAME \
-            --gradient_checkpointing_kwargs '{"use_reentrant": false}' \
-            # --deepspeed zero2
+    CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
+    NPROC_PER_NODE=8 \
+    swift sft_vord \
+        --model deepseek-ai/deepseek-vl-7b-chat \
+        --dataset swift/llava-instruct-mix-vsft \
+        --train_type full \
+        --learning_rate 1e-5 \
+        --torch_dtype bfloat16 \
+        --per_device_train_batch_size 8 \
+        --per_device_eval_batch_size 1 \
+        --gradient_checkpointing True \
+        --output_dir $MODEL_DIR \
+        --num_train_epochs 1 \
+        --save_steps 1000 \
+        --power $PSI \
+        --sim_margin True \
+        --logging_dir ./runs/$MODEL_NAME \
+        --gradient_checkpointing_kwargs '{"use_reentrant": false}' \
+        # --deepspeed zero2
 done

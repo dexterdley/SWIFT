@@ -13,7 +13,9 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
 NPROC_PER_NODE=8 \
 swift sft \
     --model deepseek-ai/deepseek-vl-7b-chat \
-    --dataset AI-ModelScope/LLaVA-Instruct-150K \
+    --dataset swift/llava-instruct-mix-vsft \
+    --train_type full \
+    --learning_rate 1e-5 \
     --torch_dtype bfloat16 \
     --per_device_train_batch_size 8 \
     --per_device_eval_batch_size 1 \

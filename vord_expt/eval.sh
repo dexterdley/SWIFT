@@ -8,7 +8,7 @@ MODEL_DIR="./checkpoints/deepseek-vl-7b-finetune-vord1/v0-20250228-162922/checkp
 # deepseek-vl-7b-finetune-vord1-max-mix/v0-20250312-065804
 # deepseek-vl-7b-finetune-vord2-max-mix/v0-20250312-162700
 
-for MODEL in deepseek-vl-7b-finetune-vord2-max-mix1-margin-debug/v1-20250315-201154
+for MODEL in deepseek-vl-7b-finetune-vord2-margin/v0-20250318-195055
 do
     MODEL_DIR="./checkpoints/AI-ModelScope/LLaVA-Instruct-150K/${MODEL}/checkpoint-9662/"
 

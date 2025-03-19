@@ -33,7 +33,7 @@ def mixup_process(x, y, mixup_alpha=1.0):
         lam = 0.5 * torch.distributions.Beta(mixup_alpha, mixup_alpha).sample((B, 1, 1, 1, 1)).to(x.device)
     else:
         lam = 1.0
-    lam = 0.5
+
     x_mix = x * lam + x[indices] * (1 - lam)
     return x_mix, lam
 
@@ -182,9 +182,15 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
         if loss_scale is not None:
             loss_kwargs['loss_scale'] = loss_scale
 
-        cd_inputs = inputs.copy()
-
         outputs = model(**inputs)
+        
+        cd_inputs = {}
+        for key, value in inputs.items():
+            if isinstance(value, torch.Tensor):
+                cd_inputs[key] = value.clone()
+            else:
+                cd_inputs[key] = value
+
         # Save past state if it exists
         # TODO: this needs to be fixed and made cleaner later.
         if self.args.past_index >= 0:
@@ -195,7 +201,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
         if _is_peft_model(unwrapped_model):
             ViT = unwrapped_model.base_model.model.vision_model  # deepseek = vision_model
         else:
-            ViT = unwrapped_model.model.vision_model
+            ViT = unwrapped_model.vision_model
 
         # Here
         images_cd, lam = mixup_process(inputs['pixel_values'], inputs['labels'])
@@ -214,6 +220,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
 
         if labels is None:
             labels = inputs['labels']
+            outputs.loss = outputs.loss.to(labels.device)
             # fix https://github.com/huggingface/transformers/issues/34263
             if num_items_in_batch is not None:
                 outputs.loss = outputs.loss * (labels[:, 1:] != -100).sum() / num_items_in_batch
@@ -240,12 +247,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
 
             vord_loss = vord_loss[mask].mean()
             vord_out = F.relu(max_cd_probs - probs.max(2).values)[mask].mean()
-
-            #print(loss.item(), vord_loss.item())
-            # pure_vord = F.relu(max_cd_probs - probs.max(2).values)
-            # print(loss.item(), vord_loss.item())
-            # print(pure_vord.sum(), pure_vord[mask].mean())
-            # pdb.set_trace()
+            
             self.state.xent_loss = loss
             self.state.vord_loss = vord_out
 
