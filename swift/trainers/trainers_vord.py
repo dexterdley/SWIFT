@@ -23,17 +23,18 @@ from .mixin_vord import SwiftMixinVORD
 from .torchacc_mixin import TorchAccMixin
 
 cosine_sim = nn.CosineSimilarity(dim=1, eps=1e-6)
-np.random.seed(0)
 
 def mixup_process(x, y, mixup_alpha=1.0):
     B = x.shape[0]
-    indices = np.random.permutation(x.size(0))
- 
+    indices = torch.randperm(B).to(x.device)
+
+    while torch.any(indices == torch.arange(B).to(x.device)):
+        indices = torch.randperm(B).to(x.device) # disallow repeats, i.e., x[0] and x[0] again
+
     if mixup_alpha == 1.0:
         lam = 0.5 * torch.distributions.Beta(mixup_alpha, mixup_alpha).sample((B, 1, 1, 1, 1)).to(x.device)
     else:
         lam = 1.0
-
     x_mix = x * lam + x[indices] * (1 - lam)
     return x_mix, lam
 

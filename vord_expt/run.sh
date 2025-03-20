@@ -13,8 +13,7 @@ do
 
     echo "Training ${MODEL_NAME}"
 
-    CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
-    NPROC_PER_NODE=8 \
+    CUDA_VISIBLE_DEVICES=0\
     swift sft_vord \
         --model deepseek-ai/deepseek-vl-7b-chat \
         --dataset swift/llava-instruct-mix-vsft \
@@ -22,7 +21,7 @@ do
         --learning_rate 1e-5 \
         --torch_dtype bfloat16 \
         --per_device_train_batch_size 8 \
-        --per_device_eval_batch_size 1 \
+        --per_device_eval_batch_size 8 \
         --gradient_checkpointing True \
         --output_dir $MODEL_DIR \
         --num_train_epochs 1 \

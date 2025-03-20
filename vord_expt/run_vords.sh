@@ -7,9 +7,9 @@ MODEL_DIR="./checkpoints/$MODEL_NAME"
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 ################## SWIFT ##################
 # swift/ScienceQA
-for PSI in 2 0 1
+for PSI in 2 1
 do
-    MODEL_NAME="${DATASET}/deepseek-vl-${SIZE}-full-finetune-vord${PSI}-margin"
+    MODEL_NAME="${DATASET}/deepseek-vl-${SIZE}-full-finetune-vord${PSI}-margin-newmix"
     MODEL_DIR="./checkpoints/$MODEL_NAME"
 
     echo "Training ${MODEL_NAME}, ${DATASET}"
