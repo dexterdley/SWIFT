@@ -307,6 +307,7 @@ class SwiftMixinVORD:
             logs['train_speed(iter/s)'] = round(self.state.global_step / elapse_time, 6)
             logs['log_xent_loss'] = self.state.xent_loss.item()
             logs['log_vord_loss'] = self.state.vord_loss.item()
+            logs['log_margin'] = self.state.margin.item()
             for k in list(logs.keys()):
                 if logs[k] is None:
                     logs.pop(k)

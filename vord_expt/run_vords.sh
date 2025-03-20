@@ -23,7 +23,7 @@ do
         --dataset $DATASET\
         --torch_dtype bfloat16 \
         --per_device_train_batch_size 8 \
-        --per_device_eval_batch_size 1 \
+        --per_device_eval_batch_size 8 \
         --gradient_checkpointing True \
         --output_dir $MODEL_DIR \
         --num_train_epochs 1 \
