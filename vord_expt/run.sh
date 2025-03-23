@@ -6,17 +6,17 @@ SIZE="7b"
 #--model swift/llava-v1.6-vicuna-7b-hf \
 #--model AI-ModelScope/llava-onevision-qwen2-0.5b-ov-hf \
 
-for PSI in 0 2
+for PSI in 2
 do
     MODEL_NAME="AI-ModelScope/llava-onevision-qwen2-0.5b-ov-hf${PSI}-debug"
     MODEL_DIR="./checkpoints/$MODEL_NAME"
 
     echo "Training ${MODEL_NAME}"
 
-    CUDA_VISIBLE_DEVICES=0\
+    CUDA_VISIBLE_DEVICES=1\
     swift sft_vord \
         --model deepseek-ai/deepseek-vl-7b-chat \
-        --dataset swift/llava-instruct-mix-vsft \
+        --dataset AI-ModelScope/LLaVA-Instruct-150K \
         --train_type full \
         --learning_rate 1e-5 \
         --torch_dtype bfloat16 \

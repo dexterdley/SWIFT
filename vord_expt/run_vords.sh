@@ -9,7 +9,7 @@ DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 # swift/ScienceQA
 for PSI in 2 1
 do
-    MODEL_NAME="${DATASET}/deepseek-vl-${SIZE}-full-finetune-vord${PSI}-margin-newmix"
+    MODEL_NAME="${DATASET}/deepseek-vl-${SIZE}-full-finetune-vord${PSI}-margin-diffuse"
     MODEL_DIR="./checkpoints/$MODEL_NAME"
 
     echo "Training ${MODEL_NAME}, ${DATASET}"
@@ -18,9 +18,9 @@ do
     NPROC_PER_NODE=8 \
     swift sft_vord \
         --model deepseek-ai/deepseek-vl-7b-chat \
+        --dataset $DATASET\
         --train_type full \
         --learning_rate 1e-5 \
-        --dataset $DATASET\
         --torch_dtype bfloat16 \
         --per_device_train_batch_size 8 \
         --per_device_eval_batch_size 8 \

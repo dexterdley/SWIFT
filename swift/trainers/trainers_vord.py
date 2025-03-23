@@ -205,7 +205,8 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             ViT = unwrapped_model.vision_model
 
         # Here
-        images_cd, lam = mixup_process(inputs['pixel_values'], inputs['labels'])
+        # images_cd, lam = mixup_process(inputs['pixel_values'], inputs['labels'])
+        images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=999)
         cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
 
         with torch.no_grad():
@@ -218,6 +219,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
 
             if len(angular_similarity_margin) > BS: # For deepseek high and low heads
                 angular_similarity_margin = (angular_similarity_margin[:BS] + angular_similarity_margin[BS:]) / 2
+                # angular_similarity_margin = angular_similarity_margin[:BS]
 
         if labels is None:
             labels = inputs['labels']
@@ -242,7 +244,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             max_cd_probs = torch.gather(cd_probs, dim=2, index=max_indices).squeeze(-1)
 
             if self.args.sim_margin:  # Max vocab, L1 or L2 variant with margins
-                vord_loss = F.relu(max_cd_probs - probs.max(2).values).pow(self.args.power)
+                vord_loss = F.relu(max_cd_probs - probs.max(2).values + angular_similarity_margin.unsqueeze(1)).pow(self.args.power)
             else:
                 vord_loss = F.relu(max_cd_probs - probs.max(2).values).pow(self.args.power)
 
