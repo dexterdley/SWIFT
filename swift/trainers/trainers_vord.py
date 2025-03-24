@@ -229,7 +229,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             cd_outputs = model(**cd_inputs)  # forward mixed images
             clean_feats = ViT(inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
             cd_feats = ViT(cd_inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
-
+            pdb.set_trace()
             if 'last_hidden_state' in clean_feats:
                 cosine_similarity = cosine_sim(clean_feats['last_hidden_state'].mean(2), cd_feats['last_hidden_state'].mean(2)).clamp(-1, 1)
                 angular_similarity_margin = torch.acos(cosine_similarity) / torch.tensor(np.pi).cuda()
