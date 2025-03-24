@@ -1,14 +1,14 @@
 ################## SWIFT ##################
-SIZE="4b"
+SIZE="7b"
+MODEL="swift/llava-v1.6-vicuna-7b-hf"
+DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 # --model deepseek-ai/deepseek-vl-7b-chat \
 # --model swift/llava-v1.6-vicuna-7b-hf \
-MODEL="LLM-Research/gemma-3-4b-pt"
-DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 ################## SWIFT ##################
 # swift/ScienceQA
 for PSI in 0 1 2
 do
-    MODEL_NAME="${DATASET}/gemma-3-${SIZE}-finetune-vord${PSI}-margin-mix"
+    MODEL_NAME="${DATASET}/llava-v1.6-${SIZE}-finetune-vord${PSI}-margin-mix-diffusion"
     MODEL_DIR="./checkpoints/$MODEL_NAME"
 
     echo "Training ${MODEL_NAME}, ${DATASET}"

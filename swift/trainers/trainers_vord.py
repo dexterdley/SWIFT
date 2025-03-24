@@ -222,7 +222,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
 
         # Here
         images_cd, lam = mixup_process(inputs['pixel_values'], inputs['labels'])
-        images_cd = add_diffusion_noise(images_cd, noise_step=500)
+        images_cd = add_diffusion_noise(images_cd, noise_step=999)
         cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
 
         with torch.no_grad():
