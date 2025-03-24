@@ -1,15 +1,14 @@
 ################## SWIFT ##################
-SIZE="7b"
+SIZE="4b"
 # --model deepseek-ai/deepseek-vl-7b-chat \
 # --model swift/llava-v1.6-vicuna-7b-hf \
-MODEL_NAME="deepseek-vl-${SIZE}-finetune-base"
-MODEL_DIR="./checkpoints/$MODEL_NAME"
+MODEL="LLM-Research/gemma-3-4b-pt"
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 ################## SWIFT ##################
 # swift/ScienceQA
-for PSI in 2 1
+for PSI in 0 1 2
 do
-    MODEL_NAME="${DATASET}/deepseek-vl-${SIZE}-full-finetune-vord${PSI}-margin-diffuse"
+    MODEL_NAME="${DATASET}/gemma-3-${SIZE}-finetune-vord${PSI}-margin-mix"
     MODEL_DIR="./checkpoints/$MODEL_NAME"
 
     echo "Training ${MODEL_NAME}, ${DATASET}"
@@ -17,10 +16,8 @@ do
     CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
     NPROC_PER_NODE=8 \
     swift sft_vord \
-        --model deepseek-ai/deepseek-vl-7b-chat \
+        --model $MODEL \
         --dataset $DATASET\
-        --train_type full \
-        --learning_rate 1e-5 \
         --torch_dtype bfloat16 \
         --per_device_train_batch_size 8 \
         --per_device_eval_batch_size 8 \
