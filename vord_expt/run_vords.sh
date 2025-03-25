@@ -6,7 +6,7 @@ MODEL="AI-ModelScope/paligemma-3b-pt-224"
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 ################## SWIFT ##################
 # swift/ScienceQA
-for PSI in 0 1 2
+for PSI in 1 2
 do
     MODEL_NAME="${DATASET}/paligemma-${SIZE}-finetune-vord${PSI}-margin-mix-diffusion"
     MODEL_DIR="./checkpoints/$MODEL_NAME"

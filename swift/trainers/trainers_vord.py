@@ -229,7 +229,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             cd_outputs = model(**cd_inputs)  # forward mixed images
             clean_feats = ViT(inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
             cd_feats = ViT(cd_inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
-            pdb.set_trace()
+
             if 'last_hidden_state' in clean_feats:
                 cosine_similarity = cosine_sim(clean_feats['last_hidden_state'].mean(2), cd_feats['last_hidden_state'].mean(2)).clamp(-1, 1)
                 angular_similarity_margin = torch.acos(cosine_similarity) / torch.tensor(np.pi).cuda()
@@ -268,16 +268,23 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             max_indices = torch.argmax(probs, dim=2, keepdim=True)  # Find argmax along vocab
             max_cd_probs = torch.gather(cd_probs, dim=2, index=max_indices).squeeze(-1)
 
+            hard_neg_mask = torch.ones_like(probs, dtype=torch.bool)
+            hard_neg_mask.scatter_(2, max_indices, False)  # Mask out y' = y
+
             if self.args.sim_margin:  # Max vocab, L1 or L2 variant with margins
-                vord_loss = F.relu(max_cd_probs - probs.max(2).values + angular_similarity_margin.unsqueeze(1)).pow(self.args.power)
+                vord_loss_a = F.relu(max_cd_probs - probs.max(2).values + angular_similarity_margin.unsqueeze(1)).pow(self.args.power) # 1st term: max(P(y|v̂, x) - P(y|v, x) + m, 0)^ψ
+                vord_loss_b = F.relu( (probs - cd_probs) * hard_neg_mask ).pow(self.args.power).mean(2) # 2nd term: sum over y'≠y of max(P(y'|v, x) - P(y'|v̂, x) + m, 0)^ψ
+                vord_loss = vord_loss_a + vord_loss_b
             else:
                 vord_loss = F.relu(max_cd_probs - probs.max(2).values).pow(self.args.power)
 
             vord_loss = vord_loss[mask].mean()
-            # vord_out = F.relu(max_cd_probs - probs.max(2).values)[mask].mean()
-            
+            vord_out_a = F.relu(max_cd_probs - probs.max(2).values)[mask].mean()
+            vord_out_b = F.relu( (probs - cd_probs) * hard_neg_mask ).mean(2)[mask].mean()
+
             self.state.xent_loss = loss
-            self.state.vord_loss = vord_loss
+            self.state.vord_loss_a = vord_out_a
+            self.state.vord_loss_b = vord_out_b
             self.state.margin = angular_similarity_margin.unsqueeze(1).mean()
 
             if self.args.power > 0:
