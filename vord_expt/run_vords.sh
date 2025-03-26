@@ -40,7 +40,6 @@ do
           --logging_dir "$LOGGING_DIR" \
           --deepspeed zero2 \
           --eval_limit 100 \
-          --eval_dataset realWorldQA \
-          --eval_backend VLMEvalKit
+          --eval_datasets realWorldQA
   done
 done

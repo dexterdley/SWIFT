@@ -290,12 +290,6 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
 
             if self.args.power > 0:
                  loss += vord_loss
-            else:
-                pass
-
-            if torch.isnan(loss).any() or torch.isnan(vord_loss).any():
-                pdb.set_trace()
-                raise TypeError("Sorry, some nans in loss are found")
 
         else:
             unwrapped_model = self.accelerator.unwrap_model(model)
@@ -311,7 +305,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             else:
                 loss = self.label_smoother(outputs, labels)
 
-        if self.args.sequence_parallel_size > 1:
+        if self.template.sequence_parallel_size > 1:
             from swift.trainers.xtuner import reduce_xtuner_sequence_parallel_loss
             loss = reduce_xtuner_sequence_parallel_loss(loss, labels)
  

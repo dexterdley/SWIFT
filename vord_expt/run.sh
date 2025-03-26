@@ -32,7 +32,6 @@ do
         --logging_dir ./runs/$MODEL_NAME \
         --gradient_checkpointing_kwargs '{"use_reentrant": false}' \
         --eval_limit 100 \
-        --eval_dataset realWorldQA \
-        --eval_backend VLMEvalKit \
+        --eval_datasets realWorldQA \
         # --deepspeed zero2
 done

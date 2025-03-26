@@ -68,9 +68,9 @@ class SwiftMixinVORD:
         self.template = template
         self.max_memory = 0
         self.hub = get_hub()
-        if args.sequence_parallel_size > 1:
-            from swift.trainers_vord.xtuner import init_sequence_parallel_xtuner
-            init_sequence_parallel_xtuner(args.sequence_parallel_size)
+        if template.sequence_parallel_size > 1:
+            from swift.trainers.xtuner import init_sequence_parallel_xtuner
+            init_sequence_parallel_xtuner(template.sequence_parallel_size)
 
         self.model_meta = model.model_meta
         with self.hub.patch_hub():
@@ -338,10 +338,10 @@ class SwiftMixinVORD:
             return self._get_eval_sampler(self.train_dataset)
 
     def get_train_dataloader(self):
-        if self.args.sequence_parallel_size == 1:
+        if self.template.sequence_parallel_size == 1:
             return super().get_train_dataloader()
         else:
-            from swift.trainers_vord.xtuner import get_xtuner_train_dataloader
+            from swift.trainers.xtuner import get_xtuner_train_dataloader
             return get_xtuner_train_dataloader(self)
 
     def _compute_acc(self, outputs, labels) -> None:
@@ -354,8 +354,37 @@ class SwiftMixinVORD:
                 preds = preds.to('cpu')
                 labels = labels.to('cpu')
             metrics = compute_acc(
-                preds, labels, acc_strategy=args.acc_strategy, is_encoder_decoder=args.is_encoder_decoder)
+                preds, labels, acc_strategy=args.acc_strategy, is_encoder_decoder=self.template.is_encoder_decoder)
             for k, v in metrics.items():
                 if k not in self._custom_metrics:
                     self._custom_metrics[k] = MeanMetric(nan_value=None)
                 self._custom_metrics[k].update(v)
+                
+    @torch.no_grad()
+    def _evalscope_eval(self):
+        from ..llm.eval.utils import EvalModel
+        from evalscope import TaskConfig, run_task
+        from evalscope.constants import EvalType
+
+        self.model.eval()
+        max_batch_size = self.args.per_device_eval_batch_size
+        custom_model = EvalModel(
+            self.model, self.template, max_batch_size=max_batch_size, model_name=f'model-step{self.state.global_step}')
+        task_config = TaskConfig(
+            model=custom_model,
+            eval_type=EvalType.CUSTOM,
+            datasets=self.args.eval_datasets,
+            dataset_args=self.args.eval_datasets_args,
+            limit=self.args.eval_limit,
+            work_dir=os.path.join(self.args.output_dir, 'eval'),
+            eval_batch_size=max_batch_size,
+            generation_config=self.args.eval_generation_config or {'max_tokens': 512},
+        )
+        # start evaluation
+        eval_report = run_task(task_config)
+        # convert to dict
+        eval_dict = {f'test_{k}': v.score for k, v in eval_report.items()}
+        self.log(eval_dict)
+
+        self.model.train()
+        return eval_dict
