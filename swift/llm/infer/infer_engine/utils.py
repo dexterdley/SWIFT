@@ -18,7 +18,7 @@ from transformers import GenerationConfig, LogitsProcessor
 from transformers.generation.streamers import BaseStreamer
 
 from swift.llm.model.register import fix_do_sample_warning
-from swift.utils import get_device, get_device_count, get_node_setting
+from swift.utils import get_current_device, get_device, get_device_count, get_node_setting, set_device
 from ..protocol import RequestConfig
 
 
@@ -265,8 +265,12 @@ def patch_lmdeploy(load_weights=False):
             if not load_weights:
                 for _ in e.map(self.model_comm.process_weight, self.gpu_list, ranks):
                     pass
-            for _ in e.map(self.model_comm.create_engine, self.gpu_list, ranks, repeat(self.nccl_params)):
-                pass
+            if version.parse(lmdeploy.__version__) < version.parse('0.7.2'):
+                for _ in e.map(self.model_comm.create_engine, self.gpu_list, ranks, repeat(self.nccl_params)):
+                    pass
+            else:
+                for _ in e.map(self.model_comm.create_engine, self.gpu_list, ranks):
+                    pass
 
     def _create_weight(self, model_comm):
         """Allocate weight buffer, load params if from_workspace."""
@@ -274,7 +278,8 @@ def patch_lmdeploy(load_weights=False):
         # TODO: support mpi
         self.node_id = 0
         self.node_num = 1
-        self.nccl_params = model_comm.create_nccl_params(self.node_id)
+        if version.parse(lmdeploy.__version__) < version.parse('0.7.2'):
+            self.nccl_params = model_comm.create_nccl_params(self.node_id)
         torch.cuda.synchronize()
 
         # create weight
@@ -465,12 +470,12 @@ def patch_npu_vllm(vllm_device: str):
 
 @contextmanager
 def set_device_context(device: Union[str, int]):
-    original_device = torch.cuda.current_device()
-    torch.cuda.set_device(device)
+    origin_device = get_current_device()
+    set_device(device)
     try:
         yield
     finally:
-        torch.cuda.set_device(original_device)
+        set_device(origin_device)
 
 
 @contextmanager
@@ -499,13 +504,13 @@ def restore_torch_device_after_vllm_init():
     ensures it is restored upon exit, even if the device is modified within the context.
 
     """
-    origin_device = torch.cuda.current_device()
+    origin_device = get_current_device()
     try:
         yield
     finally:
-        current_device = torch.cuda.current_device()
+        current_device = get_current_device()
         if origin_device != current_device:
-            torch.cuda.set_device(origin_device)
+            set_device(origin_device)
 
 
 def patch_vllm_memory_leak():

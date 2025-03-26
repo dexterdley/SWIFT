@@ -14,6 +14,7 @@ from .utils import AdapterRequest, patch_vllm_memory_leak
 
 try:
     # After setting the environment variables, import vllm. This way of writing allows lint to pass.
+    os.environ['VLLM_USE_V1'] = os.environ.get('VLLM_USE_V1', '0')
     os.environ['VLLM_WORKER_MULTIPROC_METHOD'] = 'spawn'
     os.environ['VLLM_ENGINE_ITERATION_TIMEOUT_S'] = '3600'
     import vllm
@@ -96,6 +97,10 @@ class GRPOVllmEngine(VllmEngine):
     @property
     def inner_model(self):
         return self.engine.llm_engine.model_executor.driver_worker.model_runner.model
+
+    @property
+    def inner_model_executor(self):
+        return self.engine.llm_engine.model_executor
 
     def infer(
         self,
