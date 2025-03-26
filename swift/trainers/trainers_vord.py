@@ -222,7 +222,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
 
         # Here
         images_cd, lam = mixup_process(inputs['pixel_values'], inputs['labels'])
-        images_cd = add_diffusion_noise(images_cd, noise_step=999)
+        images_cd = add_diffusion_noise(images_cd, noise_step=500)
         cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
 
         with torch.no_grad():
@@ -232,15 +232,15 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
 
             if 'last_hidden_state' in clean_feats:
                 cosine_similarity = cosine_sim(clean_feats['last_hidden_state'].mean(2), cd_feats['last_hidden_state'].mean(2)).clamp(-1, 1)
-                angular_similarity_margin = torch.acos(cosine_similarity) / torch.tensor(np.pi).cuda()
+                angular_similarity_margin = torch.acos(cosine_similarity) / torch.tensor(np.pi).to(cosine_similarity.device)
 
             elif 'pooler_output' in clean_feats:
                 cosine_similarity = cosine_sim(clean_feats['pooler_output'], cd_feats['pooler_output']).clamp(-1, 1)
-                angular_similarity_margin = torch.acos(cosine_similarity) / torch.tensor(np.pi).cuda()
+                angular_similarity_margin = torch.acos(cosine_similarity) / torch.tensor(np.pi).to(cosine_similarity.device)
 
             else:
                 cosine_similarity = cosine_sim(torch.vstack(clean_feats).mean(1), torch.vstack(cd_feats).mean(1)).clamp(-1, 1)
-                angular_similarity_margin = torch.acos(cosine_similarity) / torch.tensor(np.pi).cuda()
+                angular_similarity_margin = torch.acos(cosine_similarity) / torch.tensor(np.pi).to(cosine_similarity.device)
 
             if "deepseek-vl" in self.args.logging_dir and len(angular_similarity_margin) > BS: # For deepseek high and low heads
                 angular_similarity_margin = (angular_similarity_margin[:BS] + angular_similarity_margin[BS:]) / 2
@@ -262,7 +262,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
 
             # Here
             logits, cd_logits = outputs['logits'], cd_outputs['logits']
-            probs, cd_probs = F.softmax(logits, 1), F.softmax(cd_logits, 1)
+            probs, cd_probs = F.softmax(logits, 2), F.softmax(cd_logits, 2)
             mask = torch.where(inputs['labels'] != -100)
 
             max_indices = torch.argmax(probs, dim=2, keepdim=True)  # Find argmax along vocab
@@ -273,14 +273,15 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
 
             if self.args.sim_margin:  # Max vocab, L1 or L2 variant with margins
                 vord_loss_a = F.relu(max_cd_probs - probs.max(2).values + angular_similarity_margin.unsqueeze(1)).pow(self.args.power) # 1st term: max(P(y|v̂, x) - P(y|v, x) + m, 0)^ψ
-                vord_loss_b = F.relu( (probs - cd_probs) * hard_neg_mask ).pow(self.args.power).mean(2) # 2nd term: sum over y'≠y of max(P(y'|v, x) - P(y'|v̂, x) + m, 0)^ψ
-                vord_loss = vord_loss_a + vord_loss_b
+                vord_loss_b = F.relu( (probs - cd_probs) * hard_neg_mask + angular_similarity_margin.view(-1, 1, 1)/probs.size(2) ).pow(self.args.power).mean(2) # 2nd term: sum over y'≠y of max(P(y'|v, x) - P(y'|v̂, x) + m, 0)^ψ
             else:
-                vord_loss = F.relu(max_cd_probs - probs.max(2).values).pow(self.args.power)
+                vord_loss_a = F.relu(max_cd_probs - probs.max(2).values).pow(self.args.power)
+                vord_loss_b = F.relu( (probs - cd_probs) * hard_neg_mask).pow(self.args.power).mean(2)
 
+            vord_loss = vord_loss_a + vord_loss_b
             vord_loss = vord_loss[mask].mean()
             vord_out_a = F.relu(max_cd_probs - probs.max(2).values)[mask].mean()
-            vord_out_b = F.relu( (probs - cd_probs) * hard_neg_mask ).mean(2)[mask].mean()
+            vord_out_b = F.relu( (probs - cd_probs) * hard_neg_mask + angular_similarity_margin.view(-1, 1, 1)/probs.size(2) ).mean(2)[mask].mean()
 
             self.state.xent_loss = loss
             self.state.vord_loss_a = vord_out_a

@@ -14,7 +14,7 @@ do
 
     echo "Training ${MODEL_NAME}"
 
-    CUDA_VISIBLE_DEVICES=1\
+    CUDA_VISIBLE_DEVICES=0\
     swift sft_vord \
         --model $MODEL \
         --dataset AI-ModelScope/LLaVA-Instruct-150K \
@@ -31,5 +31,8 @@ do
         --sim_margin True \
         --logging_dir ./runs/$MODEL_NAME \
         --gradient_checkpointing_kwargs '{"use_reentrant": false}' \
+        --eval_limit 100 \
+        --eval_dataset realWorldQA \
+        --eval_backend VLMEvalKit \
         # --deepspeed zero2
 done
