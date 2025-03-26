@@ -5,7 +5,8 @@ SIZE="3b"
 #--model deepseek-ai/deepseek-vl-7b-chat \
 #--model swift/llava-v1.6-vicuna-7b-hf \
 #--model AI-ModelScope/llava-onevision-qwen2-0.5b-ov-hf \
-MODEL="AI-ModelScope/paligemma-3b-pt-224"
+# MODEL="Qwen/Qwen2.5-VL-3B-Instruct-AWQ"
+MODEL="deepseek-ai/deepseek-vl-7b-chat"
 
 for PSI in 0
 do
@@ -18,8 +19,6 @@ do
     swift sft_vord \
         --model $MODEL \
         --dataset AI-ModelScope/LLaVA-Instruct-150K \
-        --train_type full \
-        --learning_rate 1e-5 \
         --torch_dtype bfloat16 \
         --per_device_train_batch_size 8 \
         --per_device_eval_batch_size 8 \
@@ -30,8 +29,5 @@ do
         --power $PSI \
         --sim_margin True \
         --logging_dir ./runs/$MODEL_NAME \
-        --gradient_checkpointing_kwargs '{"use_reentrant": false}' \
-        --eval_limit 100 \
-        --eval_datasets realWorldQA \
-        # --deepspeed zero2
+        --gradient_checkpointing_kwargs '{"use_reentrant": false}'
 done

@@ -208,17 +208,17 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             else:
                 ViT = unwrapped_model.vision_model
 
-        elif "llava-v1.6" in self.args.logging_dir:
+        elif "llava-v1.6" in self.args.logging_dir or "gemma" in self.args.logging_dir:
             if _is_peft_model(unwrapped_model):
                 ViT = unwrapped_model.base_model.model.vision_tower
             else:
                 ViT = unwrapped_model.vision_tower
 
-        elif "gemma" in self.args.logging_dir:
+        elif "Qwen" in self.args.logging_dir:
             if _is_peft_model(unwrapped_model):
-                ViT = unwrapped_model.base_model.model.vision_tower
+                ViT = unwrapped_model.base_model.model.visual
             else:
-                ViT = unwrapped_model.vision_tower
+                ViT = unwrapped_model.visual
 
         # Here
         images_cd, lam = mixup_process(inputs['pixel_values'], inputs['labels'])
@@ -229,7 +229,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             cd_outputs = model(**cd_inputs)  # forward mixed images
             clean_feats = ViT(inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
             cd_feats = ViT(cd_inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
-
+            
             if 'last_hidden_state' in clean_feats:
                 cosine_similarity = cosine_sim(clean_feats['last_hidden_state'].mean(2), cd_feats['last_hidden_state'].mean(2)).clamp(-1, 1)
                 angular_similarity_margin = torch.acos(cosine_similarity) / torch.tensor(np.pi).to(cosine_similarity.device)
@@ -263,13 +263,14 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             # Here
             logits, cd_logits = outputs['logits'], cd_outputs['logits']
             probs, cd_probs = F.softmax(logits, 2), F.softmax(cd_logits, 2)
-            mask = torch.where(inputs['labels'] != -100)
+            mask = (labels != -100)
+            valid_labels = labels.masked_fill(~mask, 0)
 
             max_indices = torch.argmax(probs, dim=2, keepdim=True)  # Find argmax along vocab
             max_cd_probs = torch.gather(cd_probs, dim=2, index=max_indices).squeeze(-1)
 
             hard_neg_mask = torch.ones_like(probs, dtype=torch.bool)
-            hard_neg_mask.scatter_(2, max_indices, False)  # Mask out y' = y
+            hard_neg_mask.scatter_(2, valid_labels.unsqueeze(-1), False)  # Mask out y' = y
 
             if self.args.sim_margin:  # Max vocab, L1 or L2 variant with margins
                 vord_loss_a = F.relu(max_cd_probs - probs.max(2).values + angular_similarity_margin.unsqueeze(1)).pow(self.args.power) # 1st term: max(P(y|v̂, x) - P(y|v, x) + m, 0)^ψ

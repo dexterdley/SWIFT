@@ -6,8 +6,8 @@
 ################## SWIFT ##################
 
 MODELS=(
-  "AI-ModelScope/paligemma-3b-it-224"
-  #"deepseek-ai/deepseek-vl-7b-chat"
+  "AI-ModelScope/paligemma-3b-pt-224"
+  "deepseek-ai/deepseek-vl-7b-chat"
 )
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 
@@ -21,7 +21,7 @@ do
       MODEL_DIR="./checkpoints/$MODEL_NAME"
       LOGGING_DIR="./runs/$MODEL_NAME"
 
-      echo "Training ${MODEL_NAME}, ${DATASET} with PSI=${PSI}"
+      echo "Training: ${MODEL_NAME}, ${DATASET} with PSI=${PSI}"
 
       CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
       NPROC_PER_NODE=8 \
