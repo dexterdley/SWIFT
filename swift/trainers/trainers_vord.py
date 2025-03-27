@@ -273,7 +273,9 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             hard_neg_mask.scatter_(2, valid_labels.unsqueeze(-1), False)  # Mask out y' = y
 
             if self.args.sim_margin:  # Max vocab, L1 or L2 variant with margins
-                vord_loss_a = F.relu(max_cd_probs - probs.max(2).values + angular_similarity_margin.unsqueeze(1)).pow(self.args.power) # 1st term: max(P(y|v̂, x) - P(y|v, x) + m, 0)^ψ
+                effective_margin_mask = (max_cd_probs - probs.max(2).values) >= 0
+                effective_margin = effective_margin_mask.float() * angular_similarity_margin.unsqueeze(1)
+                vord_loss_a = F.relu(max_cd_probs - probs.max(2).values + effective_margin).pow(self.args.power) # 1st term: max(P(y|v̂, x) - P(y|v, x) + m, 0)^ψ
                 vord_loss_b = F.relu( (probs - cd_probs) * hard_neg_mask + angular_similarity_margin.view(-1, 1, 1)/probs.size(2) ).pow(self.args.power).mean(2) # 2nd term: sum over y'≠y of max(P(y'|v, x) - P(y'|v̂, x) + m, 0)^ψ
             else:
                 vord_loss_a = F.relu(max_cd_probs - probs.max(2).values).pow(self.args.power)

@@ -7,13 +7,13 @@
 
 MODELS=(
   "AI-ModelScope/paligemma-3b-pt-224"
-  "deepseek-ai/deepseek-vl-7b-chat"
+  # "deepseek-ai/deepseek-vl-7b-chat"
 )
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 
 for MODEL in "${MODELS[@]}"
 do
-  for PSI in 0 1 2
+  for PSI in 0 1
   do
       # Extract the model name for the output directory
       MODEL_BASENAME=$(basename "$MODEL")
