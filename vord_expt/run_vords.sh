@@ -6,14 +6,14 @@
 ################## SWIFT ##################
 
 MODELS=(
-  # "AI-ModelScope/paligemma-3b-pt-224"
-  "deepseek-ai/deepseek-vl-7b-chat"
+  "AI-ModelScope/paligemma-3b-pt-224"
+  # "deepseek-ai/deepseek-vl-7b-chat"
 )
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 
 for MODEL in "${MODELS[@]}"
 do
-  for PSI in 1 2
+  for PSI in 2 1
   do
       # Extract the model name for the output directory
       MODEL_BASENAME=$(basename "$MODEL")
@@ -38,8 +38,9 @@ do
           --power $PSI \
           --sim_margin True \
           --logging_dir "$LOGGING_DIR" \
-          --deepspeed zero2 \
           --eval_limit 100 \
-          --eval_datasets realWorldQA
+          --eval_datasets realWorldQA \
+          --gradient_checkpointing_kwargs '{"use_reentrant": false}' \
+          --ddp_find_unused_parameters False
   done
 done

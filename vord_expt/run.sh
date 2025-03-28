@@ -6,7 +6,7 @@ SIZE="3b"
 #--model swift/llava-v1.6-vicuna-7b-hf \
 #--model AI-ModelScope/llava-onevision-qwen2-0.5b-ov-hf \
 # MODEL="Qwen/Qwen2.5-VL-3B-Instruct-AWQ"
-MODEL="AI-ModelScope/paligemma-3b-pt-224"
+MODEL="deepseek-ai/deepseek-vl-7b-chat"
 
 for PSI in 0
 do

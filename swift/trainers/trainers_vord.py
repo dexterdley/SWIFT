@@ -21,6 +21,8 @@ from swift.utils import JsonlWriter, Serializer
 from .arguments import Seq2SeqTrainingArguments, TrainingArguments
 from .mixin_vord import SwiftMixinVORD
 from .torchacc_mixin import TorchAccMixin
+from torch.utils.checkpoint import checkpoint
+from deepspeed import checkpointing as ds_checkpointing
 
 cosine_sim = nn.CosineSimilarity(dim=1, eps=1e-6)
 
@@ -224,9 +226,9 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
         images_cd, lam = mixup_process(inputs['pixel_values'], inputs['labels'])
         images_cd = add_diffusion_noise(images_cd, noise_step=500)
         cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
+        cd_outputs = model(**cd_inputs)
 
         with torch.no_grad():
-            cd_outputs = model(**cd_inputs)  # forward mixed images
             clean_feats = ViT(inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
             cd_feats = ViT(cd_inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
             
@@ -244,7 +246,6 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
 
             if "deepseek-vl" in self.args.logging_dir and len(angular_similarity_margin) > BS: # For deepseek high and low heads
                 angular_similarity_margin = (angular_similarity_margin[:BS] + angular_similarity_margin[BS:]) / 2
-                # angular_similarity_margin = angular_similarity_margin[:BS]
 
         if labels is None:
             labels = inputs['labels']
@@ -263,19 +264,16 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             # Here
             logits, cd_logits = outputs['logits'], cd_outputs['logits']
             probs, cd_probs = F.softmax(logits, 2), F.softmax(cd_logits, 2)
-            mask = (labels != -100)
-            valid_labels = labels.masked_fill(~mask, 0)
+            mask = torch.where(inputs['labels'] != -100)
 
             max_indices = torch.argmax(probs, dim=2, keepdim=True)  # Find argmax along vocab
             max_cd_probs = torch.gather(cd_probs, dim=2, index=max_indices).squeeze(-1)
 
             hard_neg_mask = torch.ones_like(probs, dtype=torch.bool)
-            hard_neg_mask.scatter_(2, valid_labels.unsqueeze(-1), False)  # Mask out y' = y
+            hard_neg_mask.scatter_(2, max_indices, False)  # Mask out y' = y
 
             if self.args.sim_margin:  # Max vocab, L1 or L2 variant with margins
-                effective_margin_mask = (max_cd_probs - probs.max(2).values) >= 0
-                effective_margin = effective_margin_mask.float() * angular_similarity_margin.unsqueeze(1)
-                vord_loss_a = F.relu(max_cd_probs - probs.max(2).values + effective_margin).pow(self.args.power) # 1st term: max(P(y|v̂, x) - P(y|v, x) + m, 0)^ψ
+                vord_loss_a = F.relu(max_cd_probs - probs.max(2).values + angular_similarity_margin.unsqueeze(1)/probs.size(2)).pow(self.args.power) # 1st term: max(P(y|v̂, x) - P(y|v, x) + m, 0)^ψ
                 vord_loss_b = F.relu( (probs - cd_probs) * hard_neg_mask + angular_similarity_margin.view(-1, 1, 1)/probs.size(2) ).pow(self.args.power).mean(2) # 2nd term: sum over y'≠y of max(P(y'|v, x) - P(y'|v̂, x) + m, 0)^ψ
             else:
                 vord_loss_a = F.relu(max_cd_probs - probs.max(2).values).pow(self.args.power)
@@ -292,8 +290,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             self.state.margin = angular_similarity_margin.unsqueeze(1).mean()
 
             if self.args.power > 0:
-                 loss += vord_loss
-
+                loss += vord_loss
         else:
             unwrapped_model = self.accelerator.unwrap_model(model)
             if is_peft_available() and isinstance(unwrapped_model, PeftModel):
