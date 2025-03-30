@@ -21,8 +21,6 @@ from swift.utils import JsonlWriter, Serializer
 from .arguments import Seq2SeqTrainingArguments, TrainingArguments
 from .mixin_vord import SwiftMixinVORD
 from .torchacc_mixin import TorchAccMixin
-from torch.utils.checkpoint import checkpoint
-from deepspeed import checkpointing as ds_checkpointing
 
 cosine_sim = nn.CosineSimilarity(dim=1, eps=1e-6)
 
@@ -65,6 +63,21 @@ def add_diffusion_noise(image_tensor, noise_step):
     noisy_image = image_tensor.clone()
     image_tensor_cd = q_x(noisy_image, noise_step)
     return image_tensor_cd
+
+def gaussian_noise(x):
+    c_values = torch.tensor([2.5, 10, 25, 50, 75], dtype=x.dtype, device=x.device)
+
+    B = x.shape[0]
+    N = len(x.shape)
+
+    severities = torch.randint(0, 5, (B,), device=x.device)
+    c = c_values[severities]
+
+    lam_shape = (B,) + (1,) * (N-1)
+    noise_scale = c.view(lam_shape) / 255.0  # Reshape for broadcasting
+    diffusion = torch.randn_like(x) * noise_scale
+    result = (x/255 + diffusion ).clamp(min=0, max=1)
+    return result * 255
 
 class TrainerVORD(SwiftMixinVORD, HfTrainer):
     args: TrainingArguments
@@ -223,8 +236,9 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
                 ViT = unwrapped_model.visual
 
         # Here
-        images_cd, lam = mixup_process(inputs['pixel_values'], inputs['labels'])
-        images_cd = add_diffusion_noise(images_cd, noise_step=500)
+        #images_cd, lam = mixup_process(inputs['pixel_values'], inputs['labels'])
+        images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=500)
+        #images_cd = gaussian_noise(inputs['pixel_values'])
         cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
         cd_outputs = model(**cd_inputs)
 
@@ -264,7 +278,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             # Here
             logits, cd_logits = outputs['logits'], cd_outputs['logits']
             probs, cd_probs = F.softmax(logits, 2), F.softmax(cd_logits, 2)
-            mask = torch.where(inputs['labels'] != -100)
+            mask = (inputs['labels'] != -100)
 
             max_indices = torch.argmax(probs, dim=2, keepdim=True)  # Find argmax along vocab
             max_cd_probs = torch.gather(cd_probs, dim=2, index=max_indices).squeeze(-1)
@@ -273,18 +287,17 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             hard_neg_mask.scatter_(2, max_indices, False)  # Mask out y' = y
 
             if self.args.sim_margin:  # Max vocab, L1 or L2 variant with margins
-                vord_loss_a = F.relu(max_cd_probs - probs.max(2).values + angular_similarity_margin.unsqueeze(1)/probs.size(2)).pow(self.args.power) # 1st term: max(P(y|v̂, x) - P(y|v, x) + m, 0)^ψ
-                vord_loss_b = F.relu( (probs - cd_probs) * hard_neg_mask + angular_similarity_margin.view(-1, 1, 1)/probs.size(2) ).pow(self.args.power).mean(2) # 2nd term: sum over y'≠y of max(P(y'|v, x) - P(y'|v̂, x) + m, 0)^ψ
+                diff = cd_probs - probs
+                vord_loss = F.relu( diff.sum(2) + angular_similarity_margin.unsqueeze(1)).pow(self.args.power) # 1st term: max(P(y|v̂, x) - P(y|v, x) + m, 0)^ψ
             else:
-                vord_loss_a = F.relu(max_cd_probs - probs.max(2).values).pow(self.args.power)
-                vord_loss_b = F.relu( (probs - cd_probs) * hard_neg_mask).pow(self.args.power).mean(2)
+                vord_loss = F.relu(max_cd_probs - probs.max(2).values).pow(self.args.power)
 
-            vord_loss = vord_loss_a + vord_loss_b
-            vord_loss = vord_loss[mask].mean()
+            vord_loss = vord_loss.mean()
             vord_out_a = F.relu(max_cd_probs - probs.max(2).values)[mask].mean()
-            vord_out_b = F.relu( (probs - cd_probs) * hard_neg_mask + angular_similarity_margin.view(-1, 1, 1)/probs.size(2) ).mean(2)[mask].mean()
+            vord_out_b = F.relu( (cd_probs - probs) * hard_neg_mask ).mean(2)[mask].mean()
 
             self.state.xent_loss = loss
+            self.state.vord_loss = F.relu( diff.sum(2) + angular_similarity_margin.unsqueeze(1) )[mask].mean()
             self.state.vord_loss_a = vord_out_a
             self.state.vord_loss_b = vord_out_b
             self.state.margin = angular_similarity_margin.unsqueeze(1).mean()

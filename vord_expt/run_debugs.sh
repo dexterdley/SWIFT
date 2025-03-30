@@ -1,10 +1,3 @@
-################## SWIFT ##################
-# SIZE="3b"
-# --model deepseek-ai/deepseek-vl-7b-chat \
-# --model swift/llava-v1.6-vicuna-7b-hf \
-# MODEL="AI-ModelScope/paligemma-3b-pt-224"
-################## SWIFT ##################
-
 MODELS=(
   "AI-ModelScope/paligemma-3b-pt-224"
   #"deepseek-ai/deepseek-vl-7b-chat"
@@ -48,7 +41,7 @@ do
           --logging_dir "$LOGGING_DIR" \
           --eval_limit 100 \
           --eval_datasets realWorldQA \
-          --deepspeed zero1
-          # --max_steps 500
+          --deepspeed zero1 \
+          --max_steps 500
   done
 done
