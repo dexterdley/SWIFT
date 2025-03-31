@@ -6,8 +6,9 @@
 ################## SWIFT ##################
 
 MODELS=(
-  "AI-ModelScope/paligemma-3b-pt-224"
-  #"deepseek-ai/deepseek-vl-7b-chat"
+  #"AI-ModelScope/paligemma-3b-pt-224"
+  "deepseek-ai/deepseek-vl-7b-chat"
+  #Qwen/Qwen2.5-VL-3B-Instruct-AWQ
 )
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 
@@ -42,13 +43,13 @@ do
           --gradient_checkpointing True \
           --output_dir "$MODEL_DIR" \
           --num_train_epochs 1 \
-          --save_steps 1000 \
+          --eval_steps 1000 \
+          --save_steps 5000 \
           --power $PSI \
           --sim_margin True \
           --logging_dir "$LOGGING_DIR" \
           --eval_limit 100 \
           --eval_datasets realWorldQA \
-          --deepspeed zero1
-          # --max_steps 500
+          --deepspeed zero2
   done
 done

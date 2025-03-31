@@ -1,13 +1,14 @@
 MODELS=(
-  "AI-ModelScope/paligemma-3b-pt-224"
+  #"AI-ModelScope/paligemma-3b-pt-224"
   #"deepseek-ai/deepseek-vl-7b-chat"
+  Qwen/Qwen2.5-VL-3B-Instruct-AWQ
 )
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 
 for MODEL in "${MODELS[@]}"
 do
   if [[ "$MODEL" == *"paligemma"* ]]; then
-    PSI_VALUES=(0 1 2)
+    PSI_VALUES=(0 1)
   elif [[ "$MODEL" == *"deepseek"* ]]; then
     PSI_VALUES=(0)
   else
@@ -18,7 +19,7 @@ do
   do
       # Extract the model name for the output directory
       MODEL_BASENAME=$(basename "$MODEL")
-      MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-newvord${PSI}-margin-diffusion"
+      MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-newvord${PSI}-margin-diffusion-debug"
       MODEL_DIR="./checkpoints/$MODEL_NAME"
       LOGGING_DIR="./runs/$MODEL_NAME"
 
@@ -35,7 +36,9 @@ do
           --gradient_checkpointing True \
           --output_dir "$MODEL_DIR" \
           --num_train_epochs 1 \
-          --save_steps 1000 \
+          --eval_steps 1000 \
+          --save_steps 4000 \
+          --max_length 1200 \
           --power $PSI \
           --sim_margin True \
           --logging_dir "$LOGGING_DIR" \
