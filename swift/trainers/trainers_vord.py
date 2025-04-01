@@ -202,7 +202,6 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             loss_kwargs['loss_scale'] = loss_scale
 
         outputs = model(**inputs)
-        
         cd_inputs = {}
         for key, value in inputs.items():
             if isinstance(value, torch.Tensor):
@@ -239,26 +238,27 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
         images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=500)
         #images_cd = gaussian_noise(inputs['pixel_values'])
         cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
-        
+        cd_outputs = model(**cd_inputs)
+
         with torch.no_grad():
-            cd_outputs = model(**cd_inputs)
-            clean_feats = ViT(inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
-            cd_feats = ViT(cd_inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
-            
-            if 'last_hidden_state' in clean_feats:
-                cosine_similarity = cosine_sim(clean_feats['last_hidden_state'].mean(2), cd_feats['last_hidden_state'].mean(2)).clamp(-1, 1)
-                angular_similarity_margin = torch.acos(cosine_similarity) / torch.tensor(np.pi).to(cosine_similarity.device)
+            if self.args.sim_margin:
+                clean_feats = ViT(inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
+                cd_feats = ViT(cd_inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
 
-            elif 'pooler_output' in clean_feats:
-                cosine_similarity = cosine_sim(clean_feats['pooler_output'], cd_feats['pooler_output']).clamp(-1, 1)
-                angular_similarity_margin = torch.acos(cosine_similarity) / torch.tensor(np.pi).to(cosine_similarity.device)
+                if 'last_hidden_state' in clean_feats:
+                    cosine_similarity = cosine_sim(clean_feats['last_hidden_state'].mean(2), cd_feats['last_hidden_state'].mean(2)).clamp(-1, 1)
+                    angular_similarity_margin = torch.acos(cosine_similarity) / torch.tensor(np.pi).to(cosine_similarity.device)
 
-            else:
-                cosine_similarity = cosine_sim(torch.vstack(clean_feats).mean(1), torch.vstack(cd_feats).mean(1)).clamp(-1, 1)
-                angular_similarity_margin = torch.acos(cosine_similarity) / torch.tensor(np.pi).to(cosine_similarity.device)
+                elif 'pooler_output' in clean_feats:
+                    cosine_similarity = cosine_sim(clean_feats['pooler_output'], cd_feats['pooler_output']).clamp(-1, 1)
+                    angular_similarity_margin = torch.acos(cosine_similarity) / torch.tensor(np.pi).to(cosine_similarity.device)
 
-            if "deepseek-vl" in self.args.logging_dir and len(angular_similarity_margin) > BS: # For deepseek high and low heads
-                angular_similarity_margin = (angular_similarity_margin[:BS] + angular_similarity_margin[BS:]) / 2
+                else:
+                    cosine_similarity = cosine_sim(torch.vstack(clean_feats).mean(2), torch.vstack(cd_feats).mean(2)).clamp(-1, 1)
+                    angular_similarity_margin = torch.acos(cosine_similarity) / torch.tensor(np.pi).to(cosine_similarity.device)
+
+                if "deepseek-vl" in self.args.logging_dir and len(angular_similarity_margin) > BS: # For deepseek high and low heads
+                    angular_similarity_margin = (angular_similarity_margin[:BS] + angular_similarity_margin[BS:]) / 2
 
         if labels is None:
             labels = inputs['labels']
@@ -286,7 +286,8 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
                 diff = cd_probs - probs + angular_similarity_margin.unsqueeze(1).unsqueeze(1)/probs.size(-1)
                 vord_loss = F.relu(diff).sum(2).pow(self.args.power) # 1st term: max(P(y|v̂, x) - P(y|v, x) + m, 0)^ψ
             else:
-                vord_loss = F.relu(max_cd_probs - probs.max(2).values).pow(self.args.power)
+                diff = cd_probs - probs
+                vord_loss = F.relu(diff).sum(2).pow(self.args.power)
 
             vord_loss = vord_loss.mean()
             vord_out_a = F.relu(max_cd_probs - probs.max(2).values)[mask].mean()
@@ -295,7 +296,8 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             self.state.vord_loss = F.relu(cd_probs - probs).sum(2).mean()
             self.state.vord_loss_margin = F.relu(diff).sum(2).mean()
             self.state.vord_loss_a = vord_out_a
-            self.state.margin = angular_similarity_margin.unsqueeze(1).mean()
+            if self.args.sim_margin:
+                self.state.margin = angular_similarity_margin.unsqueeze(1).mean()
 
             if self.args.power > 0:
                 loss += vord_loss
