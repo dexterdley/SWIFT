@@ -7,8 +7,8 @@
 
 MODELS=(
   AI-ModelScope/paligemma-3b-pt-224
-  deepseek-ai/deepseek-vl-7b-chat
-  #Qwen/Qwen2.5-VL-3B-Instruct-AWQ
+  # deepseek-ai/deepseek-vl-7b-chat
+  # Qwen/Qwen2.5-VL-3B-Instruct-AWQ
 )
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 
@@ -19,16 +19,16 @@ do
     if [[ "$MODEL" == *"paligemma"* ]]; then
       PSI_VALUES=(0 1 2)
     elif [[ "$MODEL" == *"deepseek"* ]]; then
-      PSI_VALUES=(0 1 1)
+      PSI_VALUES=(0 1 2)
     else
-      PSI_VALUES=(1) # Default PSI values if the model doesn't match
+      PSI_VALUES=(0 1 2) # Default PSI values if the model doesn't match
     fi
 
     for PSI in "${PSI_VALUES[@]}"
     do
         # Extract the model name for the output directory
         MODEL_BASENAME=$(basename "$MODEL")
-        MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-newvord${PSI}-margin-diffusion"
+        MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-newvord${PSI}-margin-diffusion-grad"
         MODEL_DIR="./checkpoints/$MODEL_NAME"
         LOGGING_DIR="./runs/$MODEL_NAME"
 
@@ -52,7 +52,7 @@ do
             --logging_dir "$LOGGING_DIR" \
             --eval_limit 100 \
             --eval_datasets realWorldQA \
-            --deepspeed zero2 \
+            --deepspeed zero1 \
             --data_seed $SEED \
             --report_to tensorboard wandb
     done
