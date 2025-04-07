@@ -6,17 +6,25 @@
 MODELS=(
   "AI-ModelScope/paligemma-3b-pt-224"
   "deepseek-ai/deepseek-vl-7b-chat"
-  # "Qwen/Qwen2.5-VL-3B-Instruct"
+  #"llava-hf/llava-v1.6-vicuna-7b-hf"
 )
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 
 for MODEL in "${MODELS[@]}"
 do  
-  for PSI in 1 2
+  if [[ "$MODEL" == *"paligemma"* ]]; then
+      PSI_VALUES=(1 2)
+  elif [[ "$MODEL" == *"deepseek"* ]]; then
+      PSI_VALUES=(1 2)
+  else
+      PSI_VALUES=(0) # Default PSI values if the model doesn't match
+  fi
+
+  for PSI in "${PSI_VALUES[@]}"
   do
     # Extract the model name for the output directory
     MODEL_BASENAME=$(basename "$MODEL")
-    MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-newvord${PSI}-grad-margin-diffusion"
+    MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-newvord${PSI}-margin-diffusion-acc-mask"
     MODEL_DIR="./checkpoints/$MODEL_NAME"
     LOGGING_DIR="./runs/$MODEL_NAME"
 

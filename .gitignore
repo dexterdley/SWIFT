@@ -149,3 +149,6 @@ megatron_output/
 
 # ast template
 ast_index_file.py
+
+
+trainers_vord_v2.py

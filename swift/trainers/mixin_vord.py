@@ -308,7 +308,6 @@ class SwiftMixinVORD:
             logs['log_xent_loss'] = self.state.xent_loss.item()
             logs['log_vord_loss'] = self.state.vord_loss.item()
             logs['log_vord_loss_margin'] = self.state.vord_loss_margin.item()
-            logs['log_vord_loss_a'] = self.state.vord_loss_a.item()
             if self.args.sim_margin:
                 logs['log_margin'] = self.state.margin.item()
             for k in list(logs.keys()):

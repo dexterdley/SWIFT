@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
+root = "/home/dex/Downloads/"
 def moving_average(data, smoothing_weight=0.99):
     """Calculates the exponentially weighted moving average."""
     smoothed = []
@@ -21,38 +22,67 @@ def moving_average(data, smoothing_weight=0.99):
 
 # File paths
 file_paths_vord = {
-    'Base': "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-finetune-vord0-max-mix-tag-train_log_vord_loss.csv",
-    'VORD 1': "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-finetune-vord1-max-mix-tag-train_log_vord_loss.csv",
-    'VORD 2': "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-finetune-vord2-max-mix-tag-train_log_vord_loss.csv",
-    'VORD 1 + m': "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-finetune-vord1-max-mix-margin-tag-train_log_vord_loss.csv",
-    'VORD 2 + m': "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-finetune-vord2-max-mix-margin-tag-train_log_vord_loss.csv",
+    #'Base': "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-finetune-vord0-max-mix-tag-train_log_vord_loss.csv",
+    #'VORD 1': "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-finetune-vord1-max-mix-tag-train_log_vord_loss.csv",
+    #'VORD 2': "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-finetune-vord2-max-mix-tag-train_log_vord_loss.csv",
+    #'VORD 1 + m': "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-finetune-vord1-max-mix-margin-tag-train_log_vord_loss.csv",
+    #'VORD 2 + m': "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-finetune-vord2-max-mix-margin-tag-train_log_vord_loss.csv",
+    #'Base': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-newvord0-margin-diffusion-tag-train_log_vord_loss_margin.csv",
+    #'VORD 1': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-newvord1-grad-margin-diffusion-tag-train_log_vord_loss_margin.csv",
+    #'VORD 2': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-newvord2-grad-margin-diffusion-tag-train_log_vord_loss_margin.csv",
+    'Base': root + "/run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-chat-finetune-newvord0-margin-diffusion-tag-train_log_vord_loss_margin.csv",
+    'VORD 1':root + "/run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-chat-finetune-newvord1-margin-diffusion-correct-vit-tag-train_log_vord_loss_margin.csv",
+    'VORD 2': root + "/run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-chat-finetune-newvord2-margin-diffusion-correct-vit-tag-train_log_vord_loss_margin.csv",
+}
+
+file_paths_gradnorm ={
+    'Base': root + "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-chat-finetune-newvord0-margin-diffusion-tag-train_grad_norm.csv",
+    'VORD 1':root + "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-chat-finetune-newvord1-margin-diffusion-tag-train_grad_norm.csv",
+    'VORD 2': root + "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-chat-finetune-newvord2-margin-diffusion-tag-train_grad_norm.csv",
+}
+
+file_paths_train_acc ={
+    'Base': root + "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-chat-finetune-newvord0-margin-diffusion-tag-train_token_acc.csv",
+    'VORD 1':root + "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-chat-finetune-newvord1-margin-diffusion-tag-train_token_acc.csv",
+    'VORD 2': root + "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-chat-finetune-newvord2-margin-diffusion-tag-train_token_acc.csv",
 }
 
 file_paths_xent = {
-    'Base': "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-finetune-vord0-max-mix-tag-train_log_xent_loss.csv",
-    'VORD 1': "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-finetune-vord1-max-mix-tag-train_log_xent_loss.csv",
-    'VORD 2': "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-finetune-vord2-max-mix-tag-train_log_xent_loss.csv",
-    'VORD 1 + m': "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-finetune-vord1-max-mix-margin-tag-train_log_xent_loss.csv",
-    'VORD 2 + m': "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-finetune-vord2-max-mix-margin-tag-train_log_xent_loss.csv",
+    #'Base': "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-finetune-vord0-max-mix-tag-train_log_xent_loss.csv",
+    #'VORD 1': "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-finetune-vord1-max-mix-tag-train_log_xent_loss.csv",
+    #'VORD 2': "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-finetune-vord2-max-mix-tag-train_log_xent_loss.csv",
+    #'VORD 1 + m': "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-finetune-vord1-max-mix-margin-tag-train_log_xent_loss.csv",
+    #'VORD 2 + m': "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-finetune-vord2-max-mix-margin-tag-train_log_xent_loss.csv",
+    'Base': root + "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-chat-finetune-newvord0-margin-diffusion-tag-train_log_xent_loss.csv",
+    'VORD 1': root + "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-chat-finetune-newvord1-margin-diffusion-tag-train_log_xent_loss.csv",
+    'VORD 2': root + "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-chat-finetune-newvord2-margin-diffusion-tag-train_log_xent_loss.csv",
 }
 
-def plot_loss(file_paths, loss_type, smoothing_weight=0.99):
+plt.rcParams.update({'font.size': 25})
+
+def plot_loss(file_paths, loss_type, save_file, smoothing_weight=0.99):
     """Plots the loss over steps for given file paths."""
-    plt.figure()
+    plt.figure(figsize=(6,5))
     for label, file_path in file_paths.items():
         df = pd.read_csv(file_path)
         plt.plot(df['Step'], moving_average(df['Value'], smoothing_weight), label=label)
 
-    plt.xlabel('Step')
-    plt.ylabel(f'{loss_type} Loss')
-    plt.title('Train Loss over Steps')
+    plt.xlabel('Steps')
+    plt.ylabel(loss_type)
+    #plt.title('Train Loss over Steps')
     plt.legend()
     plt.grid(True)
+    plt.savefig("./asset/" + save_file, format="pdf", bbox_inches="tight")
+    if loss_type == "VORD Loss":
+        plt.ylim(0.15, 0.55)
     plt.show()
 
-plot_loss(file_paths_vord, 'VORD')
-plot_loss(file_paths_xent, 'X-ent', smoothing_weight=0.8)
+plot_loss(file_paths_vord, 'VORD Loss', save_file="deepseek_vl_vord.pdf", smoothing_weight=0.5)
+plot_loss(file_paths_gradnorm, 'Gradient Norm', save_file="deepseek_vl_gradnorm.pdf", smoothing_weight=0.90)
+plot_loss(file_paths_train_acc, 'Training Accuracy', save_file="deepseek_vl_train_acc.pdf", smoothing_weight=0.95)
+plot_loss(file_paths_xent, 'X-ent Loss', save_file="deepseek_vl_xent.pdf", smoothing_weight=0.85)
 #%%
+'''
 import seaborn as sns
 
 # Increase font size for all plots
@@ -128,3 +158,4 @@ plt.legend()
 
 plt.tight_layout()
 plt.show()
+'''

@@ -1,7 +1,7 @@
 MODELS=(
   #"AI-ModelScope/paligemma-3b-pt-224"
   #"deepseek-ai/deepseek-vl-7b-chat"
-  Qwen/Qwen2.5-VL-3B-Instruct-AWQ
+  deepseek-ai/deepseek-vl2-small
 )
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 
@@ -45,6 +45,6 @@ do
           --eval_limit 100 \
           --eval_datasets realWorldQA \
           --deepspeed zero1 \
-          --max_steps 500
+          --max_steps 2000
   done
 done

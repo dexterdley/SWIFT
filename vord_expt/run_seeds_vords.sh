@@ -6,7 +6,8 @@
 ################## SWIFT ##################
 
 MODELS=(
-  AI-ModelScope/paligemma-3b-pt-224
+  AI-ModelScope/paligemma2-3b-pt-224
+  # AI-ModelScope/paligemma-3b-pt-224
   # deepseek-ai/deepseek-vl-7b-chat
   # Qwen/Qwen2.5-VL-3B-Instruct-AWQ
 )
@@ -14,7 +15,7 @@ DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 
 for MODEL in "${MODELS[@]}"
 do  
-  for SEED in 42 55 69
+  for SEED in 42 #55 69
   do
     if [[ "$MODEL" == *"paligemma"* ]]; then
       PSI_VALUES=(0 1 2)
@@ -28,7 +29,7 @@ do
     do
         # Extract the model name for the output directory
         MODEL_BASENAME=$(basename "$MODEL")
-        MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-newvord${PSI}-margin-diffusion-grad"
+        MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask"
         MODEL_DIR="./checkpoints/$MODEL_NAME"
         LOGGING_DIR="./runs/$MODEL_NAME"
 
@@ -40,7 +41,7 @@ do
             --model "$MODEL" \
             --dataset "$DATASET" \
             --torch_dtype bfloat16 \
-            --per_device_train_batch_size 8 \
+            --per_device_train_batch_size 4 \
             --per_device_eval_batch_size 8 \
             --gradient_checkpointing True \
             --output_dir "$MODEL_DIR" \
