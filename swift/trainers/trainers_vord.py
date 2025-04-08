@@ -284,7 +284,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             probs, cd_probs = F.softmax(logits, -1), F.softmax(cd_logits, -1)
 
             if self.args.sim_margin:  # 1st term: max(P(y|v̂, x) - P(y|v, x) + m, 0)^ψ
-                diff = cd_probs - probs + angular_similarity_margin.unsqueeze(1).unsqueeze(1)
+                diff = cd_probs - probs + angular_similarity_margin.unsqueeze(1).unsqueeze(1)/probs.size(-1)
             else:
                 diff = cd_probs - probs 
 
