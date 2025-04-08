@@ -4,7 +4,7 @@
 ################## SWIFT ##################
 
 #for MODEL in paligemma-3b-pt-224-finetune-newvord1-margin-diffusion-mask/v0-20250406-222451 paligemma-3b-pt-224-finetune-newvord2-margin-diffusion-mask/v0-20250407-002546 # paligemma-3b-pt-224-finetune-newvord2-grad-margin-diffusion/v0-20250402-125404 #paligemma-3b-pt-224-finetune-newvord0-margin-diffusion/v0-20250330-160209 paligemma-3b-pt-224-finetune-newvord1-margin-diffusion/v0-20250330-175349 paligemma-3b-pt-224-finetune-newvord2-margin-diffusion/v0-20250330-194809;
-for MODEL in paligemma2-3b-pt-224-finetune-newvord0-margin-diffusion-grad/v2-20250405-035108 paligemma2-3b-pt-224-finetune-newvord1-margin-diffusion-grad/v0-20250405-074306 paligemma2-3b-pt-224-finetune-newvord2-margin-diffusion-grad/v0-20250405-113809/
+for MODEL in paligemma2-3b-pt-224-finetune-vord0-margin-diffusion-mask/v0-20250407-071848/ paligemma2-3b-pt-224-finetune-vord1-margin-diffusion-mask/v0-20250407-110909/ paligemma2-3b-pt-224-finetune-vord2-margin-diffusion-mask/v0-20250407-145941/
 do
     MODEL_DIR="./checkpoints/AI-ModelScope/LLaVA-Instruct-150K/${MODEL}/checkpoint-19324/"
 

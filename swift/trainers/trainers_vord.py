@@ -289,8 +289,8 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
                 diff = cd_probs - probs 
 
             self.state.xent_loss = loss
-            self.state.vord_loss = ((F.relu(cd_probs - probs).mean(2) * mask).sum(-1)/mask.sum(-1)).mean()
-            vord_loss = ((F.relu(diff).mean(2) * mask).sum(-1)/mask.sum(-1)).mean() # accurate masking
+            self.state.vord_loss = ((F.relu(cd_probs - probs).mean(2) * mask).sum(-1)/mask.sum(-1)).mean() #running sum ver on pali2
+            vord_loss = ((F.relu(diff).mean(2) * mask).sum(-1)/mask.sum(-1)).mean() # Mask & avg over sequences
 
             if self.args.power > 0:
                 loss += vord_loss.pow(self.args.power)

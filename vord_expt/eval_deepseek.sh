@@ -4,7 +4,7 @@
 # --model AI-ModelScope/paligemma-3b-pt-224 \
 ################## SWIFT ##################
 
-for MODEL in deepseek-vl-7b-chat-finetune-newvord2-margin-diffusion-correct-vit/v0-20250403-050948; 
+for MODEL in deepseek-vl-7b-chat-finetune-newvord1-margin-diffusion-acc-mask/v0-20250408-015740/ deepseek-vl-7b-chat-finetune-newvord2-margin-diffusion-acc-mask/v0-20250408-112208/
 do
   
     MODEL_DIR="./checkpoints/AI-ModelScope/LLaVA-Instruct-150K/${MODEL}/checkpoint-9662/"
