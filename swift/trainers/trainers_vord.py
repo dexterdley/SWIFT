@@ -240,9 +240,9 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
         # images_cd, _ = mixup_process(inputs['pixel_values'], inputs['labels'])
         # images_cd = add_diffusion_noise(images_cd, noise_step=500)
         cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
-        cd_outputs = model(**cd_inputs)
         
         with torch.no_grad():
+            cd_outputs = model(**cd_inputs)
             if self.args.sim_margin:
                 clean_feats = ViT(inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
                 cd_feats = ViT(cd_inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
@@ -289,8 +289,8 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
                 diff = cd_probs - probs 
 
             self.state.xent_loss = loss
-            self.state.vord_loss = ((F.relu(cd_probs - probs).mean(2) * mask).sum(-1)/mask.sum(-1)).mean() #running sum ver on pali2
-            vord_loss = ((F.relu(diff).mean(2) * mask).sum(-1)/mask.sum(-1)).mean() # Mask & avg over sequences
+            self.state.vord_loss = ((F.relu(cd_probs - probs).sum(2) * mask).sum(-1)/mask.sum(-1)).mean() #running sum ver on pali2, but did not freeze
+            vord_loss = ((F.relu(diff).sum(2) * mask).sum(-1)/mask.sum(-1)).mean() # Mask & avg over sequences
 
             if self.args.power > 0:
                 loss += vord_loss.pow(self.args.power)

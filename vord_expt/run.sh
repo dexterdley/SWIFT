@@ -14,7 +14,7 @@ do
 
     echo "Training ${MODEL_NAME}"
 
-    CUDA_VISIBLE_DEVICES=0\
+    CUDA_VISIBLE_DEVICES=1\
     swift sft_vord \
         --model $MODEL \
         --dataset AI-ModelScope/LLaVA-Instruct-150K \
