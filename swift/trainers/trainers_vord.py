@@ -236,7 +236,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
 
         # Here
         # images_cd = gaussian_noise(inputs['pixel_values'])
-        images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=500)
+        images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=999)
         # images_cd, _ = mixup_process(inputs['pixel_values'], inputs['labels'])
         # images_cd = add_diffusion_noise(images_cd, noise_step=500)
         cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
@@ -279,23 +279,23 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             loss = outputs['loss'] if isinstance(outputs, dict) else outputs[0]
 
             # Here
-            mask = (labels != -100)
+            # mask = (labels != -100)
             logits, cd_logits = outputs['logits'], cd_outputs['logits']
             probs, cd_probs = F.softmax(logits, -1), F.softmax(cd_logits, -1)
 
-            if self.args.sim_margin:  # 1st term: max(P(y|v̂, x) - P(y|v, x) + m, 0)^ψ
+            if self.args.sim_margin:  # VORD term: max(P(y|v̂, x) - P(y|v, x) + m, 0)^ψ
                 diff = cd_probs - probs + angular_similarity_margin.unsqueeze(1).unsqueeze(1)/probs.size(-1)
             else:
-                diff = cd_probs - probs 
+                diff = cd_probs - probs
 
             self.state.xent_loss = loss
-            self.state.vord_loss = ((F.relu(cd_probs - probs).sum(2) * mask).sum(-1)/mask.sum(-1)).mean() #running sum ver on pali2, but did not freeze
-            vord_loss = ((F.relu(diff).sum(2) * mask).sum(-1)/mask.sum(-1)).mean() # Mask & avg over sequences
+            self.state.vord_loss = F.relu(cd_probs - probs).sum(2).mean() #running sum ver on pali2, but did not freeze
+            self.state.vord_loss_margin = F.relu(diff).sum(2).mean()
 
             if self.args.power > 0:
-                loss += vord_loss.pow(self.args.power)
+                vord_loss = F.relu(diff).pow(self.args.power).sum(2).mean() # No mask
+                loss += vord_loss
 
-            self.state.vord_loss_margin = vord_loss
             if self.args.sim_margin:
                 self.state.margin = angular_similarity_margin.unsqueeze(1).mean()
         else:

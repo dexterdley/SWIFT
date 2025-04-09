@@ -9,7 +9,7 @@ do
   
     MODEL_DIR="./checkpoints/AI-ModelScope/LLaVA-Instruct-150K/${MODEL}/checkpoint-9662/"
 
-    for DATASET in HallusionBench; #MME RealWorldQA
+    for DATASET in MME #HallusionBench RealWorldQA
     do
         echo "EVALUATING: ${MODEL_DIR}, ${DATASET} $BACKBONE"
 

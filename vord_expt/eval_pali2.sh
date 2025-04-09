@@ -17,7 +17,7 @@ do
             --model AI-ModelScope/paligemma2-3b-pt-224 \
             --eval_dataset "$DATASET" \
             --eval_backend VLMEvalKit \
-            --ckpt_dir "$MODEL_DIR"
-
+            --ckpt_dir "$MODEL_DIR" \
+            --max_new_tokens 10
     done
 done
