@@ -236,21 +236,18 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
 
         # Here
         # images_cd = gaussian_noise(inputs['pixel_values'])
-        images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=999)
+        images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=500)
         # images_cd, _ = mixup_process(inputs['pixel_values'], inputs['labels'])
         # images_cd = add_diffusion_noise(images_cd, noise_step=500)
         cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
-        
+    
         with torch.no_grad():
             cd_outputs = model(**cd_inputs)
             if self.args.sim_margin:
                 clean_feats = ViT(inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
                 cd_feats = ViT(cd_inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
 
-                if 'pooler_output' in clean_feats:
-                    cosine_similarity = cosine_sim(clean_feats['pooler_output'], cd_feats['pooler_output']).clamp(-1, 1)
-
-                elif 'last_hidden_state' in clean_feats:
+                if 'last_hidden_state' in clean_feats:
                     cosine_similarity = cosine_sim(clean_feats['last_hidden_state'].mean(1), cd_feats['last_hidden_state'].mean(1)).clamp(-1, 1)
 
                 else:
@@ -279,21 +276,39 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             loss = outputs['loss'] if isinstance(outputs, dict) else outputs[0]
 
             # Here
-            # mask = (labels != -100)
+            mask = (labels != -100)
             logits, cd_logits = outputs['logits'], cd_outputs['logits']
             probs, cd_probs = F.softmax(logits, -1), F.softmax(cd_logits, -1)
 
+            ordinal_ent = -cd_probs * torch.log(probs.clamp(1e-6)) #want them to be far
+            ordinal_ent = ordinal_ent.sum(-1).mean()
+
+            max_probs, max_indices = probs.max(dim=-1)
+            max_cd_probs = torch.gather(cd_probs, dim=2, index=max_indices.unsqueeze(-1)).squeeze(-1)
+
             if self.args.sim_margin:  # VORD term: max(P(y|v̂, x) - P(y|v, x) + m, 0)^ψ
-                diff = cd_probs - probs + angular_similarity_margin.unsqueeze(1).unsqueeze(1)/probs.size(-1)
+
+                vord_margin_mask = (max_cd_probs >= max_probs).float()
+                margin_term = torch.zeros_like(cd_probs)
+                margin_term.scatter_(-1, max_indices.unsqueeze(-1), (angular_similarity_margin.unsqueeze(1) * vord_margin_mask).unsqueeze(-1))
+                margin_term = margin_term + angular_similarity_margin.unsqueeze(1).unsqueeze(2) / probs.size(-1)
+                
+                #diff = cd_probs - probs + angular_similarity_margin.unsqueeze(1).unsqueeze(1)
+                diff = cd_probs - probs + margin_term
+                #diff = max_cd_probs - probs.max(-1).values + angular_similarity_margin.unsqueeze(1)
             else:
                 diff = cd_probs - probs
 
+
             self.state.xent_loss = loss
+            self.state.ordinal_ent = ordinal_ent
             self.state.vord_loss = F.relu(cd_probs - probs).sum(2).mean() #running sum ver on pali2, but did not freeze
+            # self.state.vord_loss_margin = ((F.relu(diff) * mask).sum(-1)/mask.sum(-1)).mean()
             self.state.vord_loss_margin = F.relu(diff).sum(2).mean()
 
             if self.args.power > 0:
                 vord_loss = F.relu(diff).pow(self.args.power).sum(2).mean() # No mask
+                # vord_loss = ((F.relu(diff).pow(self.args.power) * mask).sum(-1)/mask.sum(-1)).mean()
                 loss += vord_loss
 
             if self.args.sim_margin:

@@ -30,6 +30,9 @@ class SwiftEval(SwiftPipeline):
             url = f"{base_url.rstrip('/')}/chat/completions"
 
             task_cfg = self.get_task_cfg(args.eval_dataset, args.eval_backend, url)
+            # task_cfg.generation_config['do_sample'] = True
+            # task_cfg.generation_config['return_dict_in_generate'] = True
+            # task_cfg.generation_config['output_scores'] = True
             result = self.get_task_result(task_cfg)
             eval_report[args.eval_backend] = result
 

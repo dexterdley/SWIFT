@@ -1,14 +1,14 @@
 MODELS=(
-  #"AI-ModelScope/paligemma-3b-pt-224"
+  "AI-ModelScope/paligemma-3b-pt-224"
   #"deepseek-ai/deepseek-vl-7b-chat"
-  deepseek-ai/deepseek-vl2-small
+  #deepseek-ai/deepseek-vl2-small
 )
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 
 for MODEL in "${MODELS[@]}"
 do
   if [[ "$MODEL" == *"paligemma"* ]]; then
-    PSI_VALUES=(0 1)
+    PSI_VALUES=(1 0)
   elif [[ "$MODEL" == *"deepseek"* ]]; then
     PSI_VALUES=(0)
   else
@@ -45,6 +45,6 @@ do
           --eval_limit 100 \
           --eval_datasets realWorldQA \
           --deepspeed zero1 \
-          --max_steps 2000
+          --max_steps 1000
   done
 done

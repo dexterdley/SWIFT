@@ -28,6 +28,7 @@ class EvalModel(CustomModel):
 
         response = self.engine.infer(infer_requests=infer_requests, request_config=generation_config, use_tqdm=False)
         dict_response = [asdict(item) for item in response]
+
         return dict_response
 
     def prepare_inputs(self, prompts: Union[List[dict], List[str]]) -> List[InferRequest]:

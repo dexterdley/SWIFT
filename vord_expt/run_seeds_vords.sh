@@ -18,18 +18,18 @@ do
   for SEED in 42 #55 69
   do
     if [[ "$MODEL" == *"paligemma"* ]]; then
-      PSI_VALUES=(0 1 2)
+      PSI_VALUES=(1 2)
     elif [[ "$MODEL" == *"deepseek"* ]]; then
       PSI_VALUES=(0 1 2)
     else
-      PSI_VALUES=(0 1 2) # Default PSI values if the model doesn't match
+      PSI_VALUES=(1 2) # Default PSI values if the model doesn't match
     fi
 
     for PSI in "${PSI_VALUES[@]}"
     do
         # Extract the model name for the output directory
         MODEL_BASENAME=$(basename "$MODEL")
-        MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask"
+        MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion"
         MODEL_DIR="./checkpoints/$MODEL_NAME"
         LOGGING_DIR="./runs/$MODEL_NAME"
 
@@ -53,7 +53,7 @@ do
             --logging_dir "$LOGGING_DIR" \
             --eval_limit 100 \
             --eval_datasets realWorldQA \
-            --deepspeed zero1 \
+            --deepspeed zero2 \
             --data_seed $SEED \
             --report_to tensorboard wandb
     done

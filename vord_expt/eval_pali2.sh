@@ -3,8 +3,7 @@
 # --model swift/llava-v1.6-vicuna-7b-hf \
 ################## SWIFT ##################
 
-for MODEL in paligemma2-3b-pt-224-finetune-vord1-margin-diffusion-mask/v1-20250408-034627
-#for MODEL in paligemma2-3b-pt-224-finetune-vord0-margin-diffusion-mask/v0-20250407-071848/ paligemma2-3b-pt-224-finetune-vord1-margin-diffusion-mask/v0-20250407-110909/ paligemma2-3b-pt-224-finetune-vord2-margin-diffusion-mask/v0-20250407-145941/
+for MODEL in paligemma2-3b-pt-224-finetune-newvord0-margin-diffusion-grad/v3-20250405-152403 #paligemma2-3b-pt-224-finetune-vord1-margin-diffusion/v0-20250409-144607 paligemma2-3b-pt-224-finetune-vord2-margin-diffusion/v0-20250409-184341
 do
     MODEL_DIR="./checkpoints/AI-ModelScope/LLaVA-Instruct-150K/${MODEL}/checkpoint-19324/"
 
@@ -18,6 +17,7 @@ do
             --eval_dataset "$DATASET" \
             --eval_backend VLMEvalKit \
             --ckpt_dir "$MODEL_DIR" \
-            --max_new_tokens 10
+            --max_new_tokens 10 \
+            --temperature 1.0
     done
 done

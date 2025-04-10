@@ -5,7 +5,7 @@
 ################## SWIFT ##################
 MODELS=(
   "AI-ModelScope/paligemma-3b-pt-224"
-  "deepseek-ai/deepseek-vl-7b-chat"
+  #"deepseek-ai/deepseek-vl-7b-chat"
   #"llava-hf/llava-v1.6-vicuna-7b-hf"
 )
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
@@ -13,9 +13,9 @@ DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 for MODEL in "${MODELS[@]}"
 do  
   if [[ "$MODEL" == *"paligemma"* ]]; then
-      PSI_VALUES=(1 2)
+      PSI_VALUES=(0 1 2)
   elif [[ "$MODEL" == *"deepseek"* ]]; then
-      PSI_VALUES=(1 2)
+      PSI_VALUES=(1)
   else
       PSI_VALUES=(0) # Default PSI values if the model doesn't match
   fi
@@ -24,7 +24,7 @@ do
   do
     # Extract the model name for the output directory
     MODEL_BASENAME=$(basename "$MODEL")
-    MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-newvord${PSI}-margin-hard-diffusion"
+    MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-big-margin-diffusion-grad"
     MODEL_DIR="./checkpoints/$MODEL_NAME"
     LOGGING_DIR="./runs/$MODEL_NAME"
 
