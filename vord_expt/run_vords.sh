@@ -13,7 +13,7 @@ DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 for MODEL in "${MODELS[@]}"
 do  
   if [[ "$MODEL" == *"paligemma"* ]]; then
-      PSI_VALUES=(0 1 2)
+      PSI_VALUES=(1)
   elif [[ "$MODEL" == *"deepseek"* ]]; then
       PSI_VALUES=(1)
   else
@@ -24,7 +24,7 @@ do
   do
     # Extract the model name for the output directory
     MODEL_BASENAME=$(basename "$MODEL")
-    MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-big-margin-diffusion-grad"
+    MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-max-margin-gaussian-acc-mask"
     MODEL_DIR="./checkpoints/$MODEL_NAME"
     LOGGING_DIR="./runs/$MODEL_NAME"
 

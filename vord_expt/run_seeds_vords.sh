@@ -29,7 +29,7 @@ do
     do
         # Extract the model name for the output directory
         MODEL_BASENAME=$(basename "$MODEL")
-        MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion"
+        MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-max-margin-diffusion-acc-mask"
         MODEL_DIR="./checkpoints/$MODEL_NAME"
         LOGGING_DIR="./runs/$MODEL_NAME"
 

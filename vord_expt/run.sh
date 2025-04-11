@@ -7,7 +7,7 @@ SIZE="3b"
 #--model AI-ModelScope/llava-onevision-qwen2-0.5b-ov-hf \
 MODEL="AI-ModelScope/paligemma-3b-pt-224"
 
-for PSI in 0
+for PSI in 1
 do
     MODEL_NAME="AI-ModelScope/${MODEL}_${PSI}-debug"
     MODEL_DIR="./checkpoints/$MODEL_NAME"
