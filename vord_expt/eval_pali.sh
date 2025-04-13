@@ -2,7 +2,7 @@
 # --model deepseek-ai/deepseek-vl-7b-chat \
 # --model swift/llava-v1.6-vicuna-7b-hf \
 ################## SWIFT ##################
-for MODEL in paligemma-3b-pt-224-finetune-vord1-max-margin-diffusion-acc-mask/v0-20250411-134017/
+for MODEL in paligemma-3b-pt-224-finetune-vord1-margin-diffusion-mask/v0-20250413-173011
 do
     MODEL_DIR="./checkpoints/AI-ModelScope/LLaVA-Instruct-150K/${MODEL}/checkpoint-9662/"
 

@@ -13,7 +13,7 @@ DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 for MODEL in "${MODELS[@]}"
 do  
   if [[ "$MODEL" == *"paligemma"* ]]; then
-      PSI_VALUES=(0)
+      PSI_VALUES=(2)
   elif [[ "$MODEL" == *"deepseek"* ]]; then
       PSI_VALUES=(1)
   else
@@ -24,7 +24,7 @@ do
   do
     # Extract the model name for the output directory
     MODEL_BASENAME=$(basename "$MODEL")
-    MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-label-margin-diffusion"
+    MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask"
     MODEL_DIR="./checkpoints/$MODEL_NAME"
     LOGGING_DIR="./runs/$MODEL_NAME"
 
@@ -49,6 +49,21 @@ do
         --eval_limit 100 \
         --eval_datasets realWorldQA \
         --deepspeed zero1 \
+        --add_version False \
         --report_to tensorboard
+
+    CKPT_DIR="${MODEL_DIR}/checkpoint-9662/"
+    for DATASET in MME #RealWorldQA
+    do
+      echo "EVALUATING: ${CKPT_DIR}, ${DATASET} $BACKBONE"
+
+      CUDA_VISIBLE_DEVICES=6 \
+      swift eval \
+            --model $MODEL \
+            --eval_dataset "$DATASET" \
+            --eval_backend VLMEvalKit \
+            --ckpt_dir "$CKPT_DIR" \
+            --max_new_tokens 10
+      done
   done
 done
