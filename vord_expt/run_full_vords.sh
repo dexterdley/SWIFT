@@ -53,14 +53,14 @@ do
         --report_to tensorboard
 
     CKPT_DIR="${MODEL_DIR}/checkpoint-9662/"
-    for DATASET in MME #RealWorldQA
+    for TESTSET in MME #RealWorldQA
     do
-      echo "EVALUATING: ${CKPT_DIR}, ${DATASET} $BACKBONE"
+      echo "EVALUATING: ${CKPT_DIR}, ${TESTSET} $BACKBONE"
 
       CUDA_VISIBLE_DEVICES=6 \
       swift eval \
             --model $MODEL \
-            --eval_dataset "$DATASET" \
+            --eval_dataset "$TESTSET" \
             --eval_backend VLMEvalKit \
             --ckpt_dir "$CKPT_DIR" \
             --max_new_tokens 10

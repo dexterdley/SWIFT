@@ -56,7 +56,7 @@ def mixup_process(x, y, mixup_alpha=1.0):
         lam = 0.5 * torch.distributions.Beta(mixup_alpha, mixup_alpha).sample(lam_shape).to(x.device)
     else:
         lam = 1.0
-    x_mix = x * lam + x[indices] * (1 - lam)
+    x_mix = x * (1 - lam) + x[indices] * lam
     return x_mix, lam
 
 def add_diffusion_noise(image_tensor, noise_step):
@@ -82,20 +82,9 @@ def add_diffusion_noise(image_tensor, noise_step):
     image_tensor_cd = q_x(noisy_image, noise_step)
     return image_tensor_cd
 
-def gaussian_noise(x):
-    c_values = torch.tensor([2.5, 10, 25, 50, 75], dtype=x.dtype, device=x.device)
-
-    B = x.shape[0]
-    N = len(x.shape)
-
-    severities = torch.randint(0, 5, (B,), device=x.device)
-    c = c_values[severities]
-
-    lam_shape = (B,) + (1,) * (N-1)
-    noise_scale = c.view(lam_shape) / 255.0  # Reshape for broadcasting
-    diffusion = torch.randn_like(x) * noise_scale
-    result = (x/255 + diffusion ).clamp(min=0, max=1)
-    return result * 255
+def gaussian_noise(x, bound=0.01):
+    diffusion = torch.randn_like(x) * torch.rand(1).clamp(0.1).to(x.device) * bound
+    return x + diffusion
 
 class TrainerVORD(SwiftMixinVORD, HfTrainer):
     args: TrainingArguments
@@ -253,15 +242,15 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
                 ViT = unwrapped_model.visual
 
         # Here
-        #images_cd = gaussian_noise(inputs['pixel_values'])
-        images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=150) #around 200
+        #images_cd = gaussian_noise(inputs['pixel_values'], bound=0.01)
+        images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=100) #around 200
         
         #images_cd, _ = mixup_process(inputs['pixel_values'], inputs['labels'])
-        #images_cd = add_diffusion_noise(images_cd, noise_step=500)
+        #images_cd = add_diffusion_noise(images_cd, noise_step=100)
         cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
-        
+
         with torch.no_grad():
-            cd_outputs = model(**cd_inputs)    
+            cd_outputs = model(**cd_inputs)
             if self.args.sim_margin:
                 clean_feats = ViT(inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
                 cd_feats = ViT(cd_inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
@@ -299,46 +288,25 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             logits, cd_logits = outputs['logits'], cd_outputs['logits']
             probs, cd_probs = F.softmax(logits, -1), F.softmax(cd_logits, -1)
 
-            # Get valid probabilities
-            #valid_labels = labels[mask]
-            #batch_indices, seq_indices = torch.where(mask)
-            #probs_target = probs[batch_indices, seq_indices, valid_labels]
-            #cd_probs_target = cd_probs[batch_indices, seq_indices, valid_labels]
-
-            #max_probs, max_indices = probs.max(dim=-1)
-            #max_cd_probs = cd_probs.gather(-1, max_indices.unsqueeze(-1)).squeeze(-1)
-
             if self.args.sim_margin:  # VORD term: max(P(y|v̂, x) - P(y|v, x) + m, 0)^ψ    
-                
                 #V1 all probs
                 margin = angular_similarity_margin.unsqueeze(1).unsqueeze(1)
-                violation_mask = cd_probs > probs #+ margin
-                diff = cd_probs - probs + margin * violation_mask
-                
-                #margin = angular_similarity_margin[batch_indices]
-                #diff = cd_probs_target - probs_target #+ margin
+                #violation_mask = cd_probs >= probs + margin
+                diff = cd_probs - probs + margin
 
-                #violation_mask = (cd_probs_target >= probs)
-                #diff = probs_target * violation_mask
-
-                #V2 max probs
-                #margin = angular_similarity_margin.unsqueeze(1)
-                #violation_mask = (max_cd_probs > max_probs)
-                #diff = max_cd_probs - max_probs + margin * violation_mask
-                
             else:
                 diff = cd_probs - probs
 
             if self.args.power > 0:
-                vord_loss = ((F.relu(diff).mean(2).pow(self.args.power) * mask).sum(-1)/mask.sum(-1)).mean() # Mask & avg over sequences
-                #vord_loss = F.relu(diff).pow(self.args.power).mean(-1).mean()
-                loss += vord_loss
+                vord_loss = ((F.relu(diff).sum(2).pow(self.args.power) * mask).sum(-1)/mask.sum(-1)).mean() # Mask & avg over sequences
+                loss += vord_loss 
 
             self.state.xent_loss = outputs['loss']
             self.state.ordinal_ent = compute_entropy(cd_probs[mask], probs[mask]) #want them to be far
             self.state.ent_probs = compute_entropy(probs[mask], probs[mask])
-            self.state.vord_loss = F.relu(cd_probs[mask] - probs[mask]).mean()
-            self.state.vord_loss_margin = vord_loss
+            self.state.vord_loss = ((F.relu(cd_probs - probs).sum(2) * mask).sum(-1)/mask.sum(-1)).mean()
+            self.state.vord_loss_margin = ((F.relu(diff).sum(2) * mask).sum(-1)/mask.sum(-1)).mean()
+
 
             if self.args.sim_margin:
                 self.state.margin = angular_similarity_margin.unsqueeze(1).mean()
