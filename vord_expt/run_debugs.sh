@@ -45,11 +45,11 @@ do
           --eval_limit 100 \
           --eval_datasets MMStar \
           --deepspeed zero1 \
-          --max_steps 500 \
+          --max_steps 5000 \
           --full_determinism True\
           --add_version False
-      '''
-      CKPT_DIR="${MODEL_DIR}/checkpoint-500/"
+
+      CKPT_DIR="${MODEL_DIR}/checkpoint-5000/"
       for TESTSET in MME #RealWorldQA
       do
         echo "EVALUATING: ${CKPT_DIR}, ${DATASET} $BACKBONE"
@@ -62,6 +62,5 @@ do
             --ckpt_dir "$CKPT_DIR" \
             --max_new_tokens 10
       done
-      '''
   done
 done
