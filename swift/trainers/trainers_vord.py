@@ -243,7 +243,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
 
         # Here
         #images_cd = gaussian_noise(inputs['pixel_values'], bound=0.01)
-        images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=100) #around 200
+        images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=200) #around 200
         
         #images_cd, _ = mixup_process(inputs['pixel_values'], inputs['labels'])
         #images_cd = add_diffusion_noise(images_cd, noise_step=100)
@@ -291,22 +291,24 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             if self.args.sim_margin:  # VORD term: max(P(y|v̂, x) - P(y|v, x) + m, 0)^ψ    
                 #V1 all probs
                 margin = angular_similarity_margin.unsqueeze(1).unsqueeze(1)
-                #violation_mask = cd_probs >= probs + margin
-                diff = cd_probs - probs + margin
+                violation_mask = cd_probs > probs + margin
+                diff = cd_probs - probs + margin * violation_mask
 
             else:
                 diff = cd_probs - probs
 
             if self.args.power > 0:
                 vord_loss = ((F.relu(diff).sum(2).pow(self.args.power) * mask).sum(-1)/mask.sum(-1)).mean() # Mask & avg over sequences
-                loss += vord_loss 
+                loss += vord_loss
+
+            #need to check the 'accuracy' or NLL of corrupted inputs (how bad is the corruption)
 
             self.state.xent_loss = outputs['loss']
+            self.state.cd_xent_loss = cd_outputs['loss']
             self.state.ordinal_ent = compute_entropy(cd_probs[mask], probs[mask]) #want them to be far
             self.state.ent_probs = compute_entropy(probs[mask], probs[mask])
             self.state.vord_loss = ((F.relu(cd_probs - probs).sum(2) * mask).sum(-1)/mask.sum(-1)).mean()
             self.state.vord_loss_margin = ((F.relu(diff).sum(2) * mask).sum(-1)/mask.sum(-1)).mean()
-
 
             if self.args.sim_margin:
                 self.state.margin = angular_similarity_margin.unsqueeze(1).mean()

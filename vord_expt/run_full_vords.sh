@@ -13,9 +13,9 @@ DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 for MODEL in "${MODELS[@]}"
 do  
   if [[ "$MODEL" == *"paligemma"* ]]; then
-      PSI_VALUES=(2)
+      PSI_VALUES=(1 2)
   elif [[ "$MODEL" == *"deepseek"* ]]; then
-      PSI_VALUES=(1)
+      PSI_VALUES=(0 1)
   else
       PSI_VALUES=(0) # Default PSI values if the model doesn't match
   fi
@@ -48,7 +48,7 @@ do
         --logging_dir "$LOGGING_DIR" \
         --eval_limit 100 \
         --eval_datasets realWorldQA \
-        --deepspeed zero1 \
+        --deepspeed zero2 \
         --add_version False \
         --report_to tensorboard
 
@@ -65,5 +65,17 @@ do
             --ckpt_dir "$CKPT_DIR" \
             --max_new_tokens 10
       done
+  done
+done
+
+for MODEL in "${MODELS[@]}"
+do 
+  for PSI in "${PSI_VALUES[@]}"
+  do
+    MODEL_BASENAME=$(basename "$MODEL")
+    MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask"
+    MODEL_DIR="./checkpoints/$MODEL_NAME"
+    cat ${MODEL_DIR}/checkpoint-9662/eval_result.jsonl
+
   done
 done

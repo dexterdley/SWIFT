@@ -306,6 +306,7 @@ class SwiftMixinVORD:
             elapse_time = time.time() - self.start_time
             logs['train_speed(iter/s)'] = round(self.state.global_step / elapse_time, 6)
             logs['log_xent_loss'] = self.state.xent_loss.item()
+            logs['log_cd_xent_loss'] = self.state.cd_xent_loss.item()
             logs['log_vord_loss'] = self.state.vord_loss.item()
             logs['log_vord_loss_margin'] = self.state.vord_loss_margin.item()
             logs['log_ordinal_ent'] = self.state.ordinal_ent.item()
