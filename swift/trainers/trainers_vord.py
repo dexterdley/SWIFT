@@ -291,7 +291,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             probs, cd_probs = F.softmax(logits, -1), F.softmax(cd_logits, -1)
 
             max_probs, max_indices = probs.max(dim=-1)
-            max_cd_probs_conj = cd_probs.gather(-1, max_indices.unsqueeze(-1)).squeeze(-1)
+            max_cd_probs, max_cd_indices = cd_probs.max(dim=-1)
 
             if self.args.sim_margin: # VORD term: max(P(y|v̂, x) - P(y|v, x) + m, 0)^ψ    
                 # V1 all probs
