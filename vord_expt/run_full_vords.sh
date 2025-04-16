@@ -48,7 +48,7 @@ do
         --logging_dir "$LOGGING_DIR" \
         --eval_limit 100 \
         --eval_datasets realWorldQA \
-        --deepspeed zero2 \
+        --deepspeed zero1 \
         --add_version False \
         --full_determinism True\
         --report_to tensorboard
