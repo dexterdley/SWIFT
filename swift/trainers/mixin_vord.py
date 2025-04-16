@@ -306,11 +306,11 @@ class SwiftMixinVORD:
             elapse_time = time.time() - self.start_time
             logs['train_speed(iter/s)'] = round(self.state.global_step / elapse_time, 6)
             logs['log_xent_loss'] = self.state.xent_loss.item()
-            logs['log_cd_xent_loss'] = self.state.cd_xent_loss.item()
             logs['log_vord_loss'] = self.state.vord_loss.item()
             logs['log_vord_loss_margin'] = self.state.vord_loss_margin.item()
             logs['log_ordinal_ent'] = self.state.ordinal_ent.item()
             logs['log_ent_probs'] = self.state.ent_probs.item()
+            logs['log_ent_cd_probs'] = self.state.ent_cd_probs.item()
             if self.args.sim_margin:
                 logs['log_margin'] = self.state.margin.item()
                 logs['log_ordinal_ent/margin'] = self.state.ordinal_ent.item()/self.state.margin.clamp(1e-4).item()
@@ -361,6 +361,23 @@ class SwiftMixinVORD:
                 labels = labels.to('cpu')
             metrics = compute_acc(
                 preds, labels, acc_strategy=args.acc_strategy, is_encoder_decoder=self.template.is_encoder_decoder)
+            for k, v in metrics.items():
+                if k not in self._custom_metrics:
+                    self._custom_metrics[k] = MeanMetric(nan_value=None)
+                self._custom_metrics[k].update(v)
+
+    def _compute_cd_acc(self, outputs, labels) -> None:
+        args = self.args
+        acc_steps = args.acc_steps
+        preds = outputs.logits.argmax(dim=-1)
+        if self.state.global_step % acc_steps == 0:
+            if use_torchacc():
+                ta_trim_graph()
+                preds = preds.to('cpu')
+                labels = labels.to('cpu')
+            metrics = compute_acc(
+                preds, labels, acc_strategy=args.acc_strategy, is_encoder_decoder=self.template.is_encoder_decoder)
+            metrics["token_acc_cd"] = metrics.pop("token_acc")
             for k, v in metrics.items():
                 if k not in self._custom_metrics:
                     self._custom_metrics[k] = MeanMetric(nan_value=None)

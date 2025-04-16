@@ -242,15 +242,17 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
                 ViT = unwrapped_model.visual
 
         # Here
-        #images_cd = gaussian_noise(inputs['pixel_values'], bound=0.01)
-        images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=200) #around 200
+        #images_cd = gaussian_noise(inputs['pixel_values'], bound=1.0)
+        #images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=200) #around 200
         
         #images_cd, _ = mixup_process(inputs['pixel_values'], inputs['labels'])
-        #images_cd = add_diffusion_noise(images_cd, noise_step=100)
+        #images_cd = add_diffusion_noise(images_cd, noise_step=999)
+        #images_cd = torch.zeros_like(inputs['pixel_values']).to('cuda')
+        images_cd = torch.randn_like(inputs['pixel_values']).to('cuda')
         cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
+        cd_outputs = model(**cd_inputs)
 
         with torch.no_grad():
-            cd_outputs = model(**cd_inputs)
             if self.args.sim_margin:
                 clean_feats = ViT(inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
                 cd_feats = ViT(cd_inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
@@ -288,27 +290,36 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             logits, cd_logits = outputs['logits'], cd_outputs['logits']
             probs, cd_probs = F.softmax(logits, -1), F.softmax(cd_logits, -1)
 
-            if self.args.sim_margin:  # VORD term: max(P(y|v̂, x) - P(y|v, x) + m, 0)^ψ    
-                #V1 all probs
-                margin = angular_similarity_margin.unsqueeze(1).unsqueeze(1)
-                violation_mask = cd_probs > probs + margin
-                diff = cd_probs - probs + margin * violation_mask
+            max_probs, max_indices = probs.max(dim=-1)
+            max_cd_probs_conj = cd_probs.gather(-1, max_indices.unsqueeze(-1)).squeeze(-1)
 
+            if self.args.sim_margin: # VORD term: max(P(y|v̂, x) - P(y|v, x) + m, 0)^ψ    
+                # V1 all probs
+                #margin = angular_similarity_margin.unsqueeze(1).unsqueeze(1)
+                #violation_mask = cd_probs > probs + margin
+                #diff = cd_probs - probs + margin * violation_mask
+                
+                # V2 max probs
+                margin = angular_similarity_margin.unsqueeze(1)
+                violation_mask = max_cd_probs > max_probs
+                diff = max_cd_probs - max_probs + violation_mask * margin #try remove mask
+                #pdb.set_trace()
             else:
                 diff = cd_probs - probs
 
             if self.args.power > 0:
-                vord_loss = ((F.relu(diff).sum(2).pow(self.args.power) * mask).sum(-1)/mask.sum(-1)).mean() # Mask & avg over sequences
-                loss += vord_loss
+                #vord_loss = ((F.relu(diff).sum(2).pow(self.args.power) * mask).sum(-1)/mask.sum(-1)).mean() # Mask & avg over sequences
+                vord_loss_a = ((F.relu(diff).pow(self.args.power) * mask).sum(-1)/mask.sum(-1)).mean()
+                loss = loss + vord_loss_a
 
             #need to check the 'accuracy' or NLL of corrupted inputs (how bad is the corruption)
 
             self.state.xent_loss = outputs['loss']
-            self.state.cd_xent_loss = cd_outputs['loss']
             self.state.ordinal_ent = compute_entropy(cd_probs[mask], probs[mask]) #want them to be far
             self.state.ent_probs = compute_entropy(probs[mask], probs[mask])
-            self.state.vord_loss = ((F.relu(cd_probs - probs).sum(2) * mask).sum(-1)/mask.sum(-1)).mean()
-            self.state.vord_loss_margin = ((F.relu(diff).sum(2) * mask).sum(-1)/mask.sum(-1)).mean()
+            self.state.ent_cd_probs = compute_entropy(cd_probs[mask], cd_probs[mask])
+            self.state.vord_loss = ((F.relu(max_cd_probs - max_probs) * mask).sum(-1)/mask.sum(-1)).mean()
+            self.state.vord_loss_margin = ((F.relu(diff) * mask).sum(-1)/mask.sum(-1)).mean()
 
             if self.args.sim_margin:
                 self.state.margin = angular_similarity_margin.unsqueeze(1).mean()
@@ -336,4 +347,5 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
         if outputs.logits is not None and labels is not None:
             # Liger does not have logits
             self._compute_acc(outputs, labels)
+            self._compute_cd_acc(cd_outputs, labels)
         return (loss, outputs) if return_outputs else loss

@@ -8,7 +8,7 @@ DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 for MODEL in "${MODELS[@]}"
 do
   if [[ "$MODEL" == *"paligemma"* ]]; then
-    PSI_VALUES=(1 0)
+    PSI_VALUES=(1)
   elif [[ "$MODEL" == *"deepseek"* ]]; then
     PSI_VALUES=(0)
   else
@@ -44,11 +44,11 @@ do
           --logging_dir "$LOGGING_DIR" \
           --eval_limit 100 \
           --eval_datasets MMStar \
-          --deepspeed zero2 \
+          --deepspeed zero1 \
           --max_steps 500 \
           --full_determinism True\
           --add_version False
-
+      
       CKPT_DIR="${MODEL_DIR}/checkpoint-500/"
       for TESTSET in MME #RealWorldQA
       do
@@ -62,6 +62,7 @@ do
             --ckpt_dir "$CKPT_DIR" \
             --max_new_tokens 10
       done
+      
   done
 done
 
