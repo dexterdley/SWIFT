@@ -5,7 +5,7 @@
 ################## SWIFT ##################
 MODELS=(
   "AI-ModelScope/paligemma-3b-pt-224"
-  "deepseek-ai/deepseek-vl-7b-chat"
+  #"deepseek-ai/deepseek-vl-7b-chat"
   #"llava-hf/llava-v1.6-vicuna-7b-hf"
 )
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
@@ -50,6 +50,7 @@ do
         --eval_datasets realWorldQA \
         --deepspeed zero2 \
         --add_version False \
+        --full_determinism True\
         --report_to tensorboard
 
     CKPT_DIR="${MODEL_DIR}/checkpoint-9662/"
