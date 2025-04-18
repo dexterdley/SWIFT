@@ -22,6 +22,7 @@ from .arguments import Seq2SeqTrainingArguments, TrainingArguments
 from .mixin_vord import SwiftMixinVORD
 from .torchacc_mixin import TorchAccMixin
 
+criterion = nn.CrossEntropyLoss(ignore_index=-100, reduction='none')
 cosine_sim = nn.CosineSimilarity(dim=1, eps=1e-6)
 
 def compute_entropy(target_probs, pred_probs, mask=None):
@@ -243,16 +244,16 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
 
         # Here
         #images_cd = gaussian_noise(inputs['pixel_values'], bound=1.0)
-        #images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=200) #around 200
+        images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=200) #around 200
         
         #images_cd, _ = mixup_process(inputs['pixel_values'], inputs['labels'])
         #images_cd = add_diffusion_noise(images_cd, noise_step=999)
         #images_cd = torch.zeros_like(inputs['pixel_values']).to('cuda')
-        images_cd = torch.randn_like(inputs['pixel_values']).to('cuda')
+        #images_cd = torch.randn_like(inputs['pixel_values']).to('cuda') * inputs['pixel_values']
         cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
-        cd_outputs = model(**cd_inputs)
-
+        
         with torch.no_grad():
+            cd_outputs = model(**cd_inputs)
             if self.args.sim_margin:
                 clean_feats = ViT(inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
                 cd_feats = ViT(cd_inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
@@ -286,40 +287,36 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             loss = outputs['loss'] if isinstance(outputs, dict) else outputs[0]
 
             # Here
-            mask = (labels != -100)
+            mask = (labels[:, 1:] != -100)
             logits, cd_logits = outputs['logits'], cd_outputs['logits']
             probs, cd_probs = F.softmax(logits, -1), F.softmax(cd_logits, -1)
 
-            max_probs, max_indices = probs.max(dim=-1)
-            max_cd_probs, max_cd_indices = cd_probs.max(dim=-1)
-
-            if self.args.sim_margin: # VORD term: max(P(y|v̂, x) - P(y|v, x) + m, 0)^ψ    
-                # V1 all probs
-                #margin = angular_similarity_margin.unsqueeze(1).unsqueeze(1)
-                #violation_mask = cd_probs > probs + margin
-                #diff = cd_probs - probs + margin * violation_mask
+            if self.args.use_vord:
+                if self.args.sim_margin: # VORD term: max(P(y|v̂, x) - P(y|v, x) + m, 0)^ψ    
+                    # V3 Decoding ver
+                    margin = angular_similarity_margin.unsqueeze(1).unsqueeze(1)
+                    ordinal_mask = ( cd_probs >= (probs + margin).clamp(max=1) ).bool()
+                else:
+                    ordinal_mask = ( cd_probs >= probs ).bool()
                 
-                # V2 max probs
-                margin = angular_similarity_margin.unsqueeze(1)
-                violation_mask = max_cd_probs > max_probs
-                diff = max_cd_probs - max_probs + violation_mask * margin #try remove mask
-                #pdb.set_trace()
-            else:
-                diff = cd_probs - probs
-
-            if self.args.power > 0:
-                #vord_loss = ((F.relu(diff).sum(2).pow(self.args.power) * mask).sum(-1)/mask.sum(-1)).mean() # Mask & avg over sequences
-                vord_loss_a = ((F.relu(diff).pow(self.args.power) * mask).sum(-1)/mask.sum(-1)).mean()
-                loss = loss + vord_loss_a
-
-            #need to check the 'accuracy' or NLL of corrupted inputs (how bad is the corruption)
+                # Apply VORD and compute loss
+                vord_logits = logits.masked_fill(ordinal_mask, logits.min())
+                vord_logits = vord_logits[:, :-1, :][mask]
+                shift_labels = labels[:, 1:][mask]
+                    
+                if num_items_in_batch is not None:
+                    loss = criterion(vord_logits, shift_labels)                
+                    # Focal term
+                    focal = (1 - torch.exp(-loss)).pow(self.args.power)
+                    loss *= focal
+                    loss = loss.sum() / num_items_in_batch
+                else:
+                    loss = outputs['loss']
 
             self.state.xent_loss = outputs['loss']
-            self.state.ordinal_ent = compute_entropy(cd_probs[mask], probs[mask]) #want them to be far
-            self.state.ent_probs = compute_entropy(probs[mask], probs[mask])
-            self.state.ent_cd_probs = compute_entropy(cd_probs[mask], cd_probs[mask])
-            self.state.vord_loss = ((F.relu(max_cd_probs - max_probs) * mask).sum(-1)/mask.sum(-1)).mean()
-            self.state.vord_loss_margin = ((F.relu(diff) * mask).sum(-1)/mask.sum(-1)).mean()
+            self.state.ordinal_ent = compute_entropy(cd_probs[:, :-1, :][mask], probs[:, :-1, :][mask]) #want them to be far
+            self.state.ent_probs = compute_entropy(probs[:, :-1, :][mask], probs[:, :-1, :][mask])
+            self.state.ent_cd_probs = compute_entropy(cd_probs[:, :-1, :][mask], cd_probs[:, :-1, :][mask])
 
             if self.args.sim_margin:
                 self.state.margin = angular_similarity_margin.unsqueeze(1).mean()

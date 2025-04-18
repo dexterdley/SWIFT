@@ -1,25 +1,19 @@
 MODELS=(
-  "AI-ModelScope/paligemma-3b-pt-224"
-  #"deepseek-ai/deepseek-vl-7b-chat"
+  #"AI-ModelScope/paligemma-3b-pt-224"
+  "deepseek-ai/deepseek-vl-7b-chat"
   #deepseek-ai/deepseek-vl2-small
 )
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
+USE_VORD_BOOLS=(true false)
+PSI=0
 
 for MODEL in "${MODELS[@]}"
 do
-  if [[ "$MODEL" == *"paligemma"* ]]; then
-    PSI_VALUES=(1)
-  elif [[ "$MODEL" == *"deepseek"* ]]; then
-    PSI_VALUES=(0)
-  else
-    PSI_VALUES=(1) # Default PSI values if the model doesn't match
-  fi
-
-  for PSI in "${PSI_VALUES[@]}"
+  for USE_VORD in "${USE_VORD_BOOLS[@]}"
   do
       # Extract the model name for the output directory
       MODEL_BASENAME=$(basename "$MODEL")
-      MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-newvord${PSI}-margin-diffusion-debug-mean"
+      MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-newvord${PSI}-margin-diffusion-debug-mean-vord-${USE_VORD}"
       MODEL_DIR="./checkpoints/$MODEL_NAME"
       LOGGING_DIR="./runs/$MODEL_NAME"
 
@@ -38,15 +32,15 @@ do
           --num_train_epochs 1 \
           --eval_steps 1000 \
           --save_steps 4000 \
-          --max_length 1200 \
           --power $PSI \
           --sim_margin True \
           --logging_dir "$LOGGING_DIR" \
           --eval_limit 100 \
           --eval_datasets MMStar \
-          --deepspeed zero1 \
+          --deepspeed zero2 \
           --max_steps 500 \
           --full_determinism True\
+          --use_vord $USE_VORD \
           --add_version False
       
       CKPT_DIR="${MODEL_DIR}/checkpoint-500/"
@@ -62,13 +56,12 @@ do
             --ckpt_dir "$CKPT_DIR" \
             --max_new_tokens 10
       done
-      
   done
 done
 
 for PSI in "${PSI_VALUES[@]}"
 do
-  MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-newvord${PSI}-margin-diffusion-debug-mean"
+  MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-newvord${PSI}-margin-diffusion-debug-mean-vord-${USE_VORD}"
   MODEL_DIR="./checkpoints/$MODEL_NAME"
   cat ${MODEL_DIR}/checkpoint-500/eval_result.jsonl
 
