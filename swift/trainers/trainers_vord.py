@@ -72,7 +72,7 @@ def add_diffusion_noise(image_tensor, noise_step):
 
 def gaussian_noise(x, bound=0.01):
     diffusion = torch.randn_like(x) * torch.rand(1).clamp(0.1).to(x.device) * bound
-    return x + diffusion
+    return 0.5 * x +  0.5 * diffusion
 
 class TrainerVORD(SwiftMixinVORD, HfTrainer):
     args: TrainingArguments

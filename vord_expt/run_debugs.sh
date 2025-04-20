@@ -4,7 +4,7 @@ MODELS=(
   #deepseek-ai/deepseek-vl2-small
 )
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
-USE_VORD_BOOLS=(true false)
+USE_VORD_BOOLS=(true)
 PSI=0
 
 for MODEL in "${MODELS[@]}"
@@ -41,7 +41,7 @@ do
           --max_steps 500 \
           --full_determinism True\
           --use_vord $USE_VORD \
-          --noise 1.0\
+          --noise 0.5\
           --add_version False
       
       CKPT_DIR="${MODEL_DIR}/checkpoint-500/"
@@ -59,7 +59,6 @@ do
       done
   done
 done
-
 
 MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-newvord${PSI}-margin-diffusion-debug-mean-vord-${USE_VORD}"
 MODEL_DIR="./checkpoints/$MODEL_NAME"
