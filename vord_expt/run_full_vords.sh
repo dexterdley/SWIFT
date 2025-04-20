@@ -10,7 +10,7 @@ MODELS=(
 )
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 USE_VORD_BOOLS=(true)
-PSI=0
+PSI=1
 
 for MODEL in "${MODELS[@]}"
 do  
@@ -46,6 +46,7 @@ do
         --add_version False \
         --full_determinism True\
         --use_vord $USE_VORD \
+        --noise 1.0 \
         --report_to tensorboard
 
     CKPT_DIR="${MODEL_DIR}/checkpoint-9662/"

@@ -31,19 +31,6 @@ def compute_entropy(target_probs, pred_probs, mask=None):
     else:
         return -torch.sum(target_probs * torch.log( pred_probs.clamp(1e-4) ) , dim=-1).mean()
 
-def compute_KL(target_probs, pred_probs, mask=None):
-    pred_probs = pred_probs.clamp(min=1e-4)
-    kl_elements = target_probs * torch.log(target_probs / pred_probs)
-    kl = torch.where(target_probs > 0, kl_elements, torch.tensor(0.0, device=target_probs.device))
-    if mask != None:
-        return kl.sum(-1).mean()
-    else:
-        return kl.sum(-1)[mask].mean()
-
-def compute_JSD(target_probs, pred_probs):
-    M = (target_probs + pred_probs)/2
-    return 0.5 * compute_KL(target_probs, M) + 0.5 * compute_KL(pred_probs, M)
-
 def mixup_process(x, y, mixup_alpha=1.0):
     B = x.shape[0]
     N = len(x.shape)
@@ -243,11 +230,11 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
                 ViT = unwrapped_model.visual
 
         # Here
-        #images_cd = gaussian_noise(inputs['pixel_values'], bound=1.0)
-        images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=200) #around 200
-        
+        images_cd = gaussian_noise(inputs['pixel_values'], bound=self.args.noise)
+        #images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=999) #around 200
+
         #images_cd, _ = mixup_process(inputs['pixel_values'], inputs['labels'])
-        #images_cd = add_diffusion_noise(images_cd, noise_step=999)
+        #images_cd = add_diffusion_noise(images_cd, noise_step=500)
         #images_cd = torch.zeros_like(inputs['pixel_values']).to('cuda')
         #images_cd = torch.randn_like(inputs['pixel_values']).to('cuda') * inputs['pixel_values']
         cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
@@ -267,7 +254,8 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
                 angular_similarity_margin = torch.acos(cosine_similarity) / torch.tensor(np.pi).to(cosine_similarity.device)
 
                 if "deepseek-vl" in self.args.logging_dir and len(angular_similarity_margin) > BS:  # For deepseek high and low heads
-                    angular_similarity_margin = (angular_similarity_margin[:BS] + angular_similarity_margin[BS:]) / 2
+                    #angular_similarity_margin = (angular_similarity_margin[:BS] + angular_similarity_margin[BS:]) / 2
+                    angular_similarity_margin = angular_similarity_margin[BS:] #use siglip head
 
                 elif len(angular_similarity_margin) > BS:
                     angular_similarity_margin = angular_similarity_margin.unsqueeze(1).mean(0) #pool vit outputs
@@ -291,28 +279,31 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             logits, cd_logits = outputs['logits'], cd_outputs['logits']
             probs, cd_probs = F.softmax(logits, -1), F.softmax(cd_logits, -1)
 
-            if self.args.use_vord:
-                if self.args.sim_margin: # VORD term: max(P(y|v̂, x) - P(y|v, x) + m, 0)^ψ    
-                    # V3 Decoding ver
-                    margin = angular_similarity_margin.unsqueeze(1).unsqueeze(1)
-                    ordinal_mask = ( cd_probs >= (probs + margin).clamp(max=1) ).bool()
-                else:
-                    ordinal_mask = ( cd_probs >= probs ).bool()
-                
-                # Apply VORD and compute loss
-                vord_logits = logits.masked_fill(ordinal_mask, logits.min())
-                vord_logits = vord_logits[:, :-1, :][mask]
-                shift_labels = labels[:, 1:][mask]
-                    
-                if num_items_in_batch is not None:
-                    loss = criterion(vord_logits, shift_labels)                
-                    # Focal term
-                    focal = (1 - torch.exp(-loss)).pow(self.args.power)
-                    loss *= focal
-                    loss = loss.sum() / num_items_in_batch
-                else:
-                    loss = outputs['loss']
+            if self.args.sim_margin: # VORD term: max(P(y|v̂, x) - P(y|v, x) + m, 0)^ψ    
+                # V3 Decoding ver
+                margin = angular_similarity_margin.unsqueeze(1).unsqueeze(1)
+                ordinal_mask = (cd_probs >= (probs + margin).clamp(max=1) ).bool()
+            else:
+                ordinal_mask = (cd_probs >= probs ).bool()
 
+            # Apply VORD and compute loss
+            min_per_position = logits.min(dim=-1, keepdim=True)[0]
+            vord_logits = logits * ~ordinal_mask
+            vord_logits += ordinal_mask * min_per_position
+
+            vord_logits = vord_logits[:, :-1, :][mask]
+            shift_labels = labels[:, 1:][mask]
+                
+            if num_items_in_batch is not None and self.args.use_vord:
+                loss = criterion(vord_logits, shift_labels)
+                # Focal term
+                focal = (1 - torch.exp(-loss)).pow(self.args.power)
+                loss *= focal
+                loss = loss.sum() / num_items_in_batch
+            else:
+                loss = outputs['loss']
+
+            self.state.num_violations = ordinal_mask.float().sum()
             self.state.xent_loss = outputs['loss']
             self.state.ordinal_ent = compute_entropy(cd_probs[:, :-1, :][mask], probs[:, :-1, :][mask]) #want them to be far
             self.state.ent_probs = compute_entropy(probs[:, :-1, :][mask], probs[:, :-1, :][mask])

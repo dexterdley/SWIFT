@@ -41,6 +41,7 @@ do
           --max_steps 500 \
           --full_determinism True\
           --use_vord $USE_VORD \
+          --noise 1.0\
           --add_version False
       
       CKPT_DIR="${MODEL_DIR}/checkpoint-500/"
@@ -59,10 +60,7 @@ do
   done
 done
 
-for PSI in "${PSI_VALUES[@]}"
-do
-  MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-newvord${PSI}-margin-diffusion-debug-mean-vord-${USE_VORD}"
-  MODEL_DIR="./checkpoints/$MODEL_NAME"
-  cat ${MODEL_DIR}/checkpoint-500/eval_result.jsonl
 
-done
+MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-newvord${PSI}-margin-diffusion-debug-mean-vord-${USE_VORD}"
+MODEL_DIR="./checkpoints/$MODEL_NAME"
+cat ${MODEL_DIR}/checkpoint-500/eval_result.jsonl
