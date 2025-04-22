@@ -1,3 +1,4 @@
+#!/bin/bash
 ################## SWIFT ##################
 # --model deepseek-ai/deepseek-vl-7b-chat \
 # --model swift/llava-v1.6-vicuna-7b-hf \

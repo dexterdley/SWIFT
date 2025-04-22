@@ -1,5 +1,4 @@
 #!/bin/bash
-
 ################## SWIFT ##################
 # SIZE="3b"
 # --model deepseek-ai/deepseek-vl-7b-chat \
