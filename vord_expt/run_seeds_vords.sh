@@ -16,7 +16,7 @@ MODELS=(
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 
 USE_VORD_BOOLS=(false true)
-SEEDS=(42) # Can add 55 69 back if needed
+SEEDS=(55 69) # Can add 55 69 back if needed
 
 for MODEL in "${MODELS[@]}"; do
   for USE_VORD in "${USE_VORD_BOOLS[@]}"; do 
@@ -32,7 +32,7 @@ for MODEL in "${MODELS[@]}"; do
       for PSI in "${PSI_VALUES[@]}"; do
         # Extract the model name for the output directory
         MODEL_BASENAME=$(basename "$MODEL")
-        MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-max-margin-diffusion-acc-mask-vord-${USE_VORD}"
+        MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-max-margin-diffusion-acc-mask-vord-${USE_VORD}-${SEED}"
         MODEL_DIR="./checkpoints/$MODEL_NAME"
         LOGGING_DIR="./runs/$MODEL_NAME"
 
@@ -66,7 +66,7 @@ for MODEL in "${MODELS[@]}"; do
 
         CKPT_DIR="${MODEL_DIR}/checkpoint-19324/"
         if [ -d "$CKPT_DIR" ]; then
-          for TESTSET in "MME"; do # You can add "RealWorldQA" back if needed
+          for TESTSET in MME POPE BLINK HallusionBench MMVet; do # You can add "RealWorldQA" back if needed
             echo "EVALUATING: ${CKPT_DIR}, ${TESTSET}"
             
             CUDA_VISIBLE_DEVICES=7 \
@@ -89,7 +89,7 @@ done
 for MODEL in "${MODELS[@]}"; do 
   for USE_VORD in "${USE_VORD_BOOLS[@]}"; do
     MODEL_BASENAME=$(basename "$MODEL")
-    MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord0-margin-diffusion-mask-decode-vord-${USE_VORD}"
+    MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord0-margin-diffusion-mask-decode-vord-${USE_VORD}-${SEED}"
     MODEL_DIR="./checkpoints/$MODEL_NAME"
     RESULT_FILE="${MODEL_DIR}/checkpoint-19324/eval_result.jsonl"
     

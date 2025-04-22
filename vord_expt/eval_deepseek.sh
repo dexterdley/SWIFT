@@ -4,12 +4,12 @@
 # --model AI-ModelScope/paligemma-3b-pt-224 \
 ################## SWIFT ##################
 
-for MODEL in deepseek-vl-7b-chat-finetune-vord1-label-margin-diffusion/v0-20250413-015000
+for MODEL in deepseek-vl-7b-chat-finetune-vord0-margin-diffusion-mask-decode-vord-true-low
 do
   
-    MODEL_DIR="./checkpoints/AI-ModelScope/LLaVA-Instruct-150K/${MODEL}/checkpoint-9662/"
+    MODEL_DIR="./checkpoints/AI-ModelScope/LLaVA-Instruct-150K/${MODEL}/checkpoint-5000/"
 
-    for DATASET in MME #HallusionBench RealWorldQA
+    for DATASET in MME # RealWorldQA
     do
         echo "EVALUATING: ${MODEL_DIR}, ${DATASET} $BACKBONE"
 

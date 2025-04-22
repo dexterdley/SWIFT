@@ -4,12 +4,12 @@
 # --model AI-ModelScope/paligemma-3b-pt-224 \
 ################## SWIFT ##################
 MODELS=(
-  "AI-ModelScope/paligemma-3b-pt-224"
+  #"AI-ModelScope/paligemma-3b-pt-224"
   "deepseek-ai/deepseek-vl-7b-chat"
   #"llava-hf/llava-v1.6-vicuna-7b-hf"
 )
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
-USE_VORD_BOOLS=(true)
+USE_VORD_BOOLS=(true false)
 PSI=0
 
 for MODEL in "${MODELS[@]}"
@@ -18,7 +18,7 @@ do
   do
     # Extract the model name for the output directory
     MODEL_BASENAME=$(basename "$MODEL")
-    MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-vord-${USE_VORD}"
+    MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-vord-${USE_VORD}-low"
     MODEL_DIR="./checkpoints/$MODEL_NAME"
     LOGGING_DIR="./runs/$MODEL_NAME"
 
@@ -46,7 +46,7 @@ do
         --add_version False \
         --full_determinism True\
         --use_vord $USE_VORD \
-        --noise 1.0 \
+        --noise 500 \
         --report_to tensorboard
 
     CKPT_DIR="${MODEL_DIR}/checkpoint-9662/"
@@ -68,7 +68,7 @@ done
 for MODEL in "${MODELS[@]}"
 do 
   MODEL_BASENAME=$(basename "$MODEL")
-  MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-vord-${USE_VORD}"
+  MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-vord-${USE_VORD}-low"
   MODEL_DIR="./checkpoints/$MODEL_NAME"
   cat ${MODEL_DIR}/checkpoint-9662/eval_result.jsonl
 done

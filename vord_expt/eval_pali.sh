@@ -6,7 +6,7 @@ for MODEL in paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-vor
 do
     MODEL_DIR="./checkpoints/AI-ModelScope/LLaVA-Instruct-150K/${MODEL}/checkpoint-9662/"
 
-    for DATASET in MME #RealWorldQA
+    for DATASET in POPE BLINK HallusionBench MMVet #MME
     do
         echo "EVALUATING: ${MODEL_DIR}, ${DATASET} $BACKBONE"
 

@@ -230,8 +230,8 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
                 ViT = unwrapped_model.visual
 
         # Here
-        images_cd = gaussian_noise(inputs['pixel_values'], bound=self.args.noise)
-        #images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=999) #around 200
+        #images_cd = gaussian_noise(inputs['pixel_values'], bound=self.args.noise)
+        images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=int(self.args.noise)) #around 200
 
         #images_cd, _ = mixup_process(inputs['pixel_values'], inputs['labels'])
         #images_cd = add_diffusion_noise(images_cd, noise_step=500)
@@ -254,8 +254,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
                 angular_similarity_margin = torch.acos(cosine_similarity) / torch.tensor(np.pi).to(cosine_similarity.device)
 
                 if "deepseek-vl" in self.args.logging_dir and len(angular_similarity_margin) > BS:  # For deepseek high and low heads
-                    #angular_similarity_margin = (angular_similarity_margin[:BS] + angular_similarity_margin[BS:]) / 2
-                    angular_similarity_margin = angular_similarity_margin[BS:] #use siglip head
+                    angular_similarity_margin = (angular_similarity_margin[:BS] + angular_similarity_margin[BS:]) / 2
 
                 elif len(angular_similarity_margin) > BS:
                     angular_similarity_margin = angular_similarity_margin.unsqueeze(1).mean(0) #pool vit outputs
