@@ -310,6 +310,8 @@ class SwiftMixinVORD:
             logs['log_ent_probs'] = self.state.ent_probs.item()
             logs['log_ent_cd_probs'] = self.state.ent_cd_probs.item()
             logs['log_num_violations'] = self.state.num_violations.item()
+            logs['log_signal_noise_ratio'] = self.state.signal_noise_ratio.item()
+
             if self.args.sim_margin:
                 logs['log_margin'] = self.state.margin.item()
                 logs['log_ordinal_ent/margin'] = self.state.ordinal_ent.item()/self.state.margin.clamp(1e-4).item()

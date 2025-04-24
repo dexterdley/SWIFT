@@ -14,8 +14,8 @@ MODELS=(
 )
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 
-USE_VORD_BOOLS=(false true)
-SEEDS=(55 69) # Can add 55 69 back if needed
+USE_VORD_BOOLS=(true)
+SEEDS=(42 55 69) # Can add 55 69 back if needed
 
 for MODEL in "${MODELS[@]}"; do
   for USE_VORD in "${USE_VORD_BOOLS[@]}"; do 
@@ -31,7 +31,7 @@ for MODEL in "${MODELS[@]}"; do
       for PSI in "${PSI_VALUES[@]}"; do
         # Extract the model name for the output directory
         MODEL_BASENAME=$(basename "$MODEL")
-        MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-max-margin-diffusion-acc-mask-vord-${USE_VORD}-${SEED}"
+        MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-acc-mask-vord-${USE_VORD}-${SEED}"
         MODEL_DIR="./checkpoints/$MODEL_NAME"
         LOGGING_DIR="./runs/$MODEL_NAME"
 

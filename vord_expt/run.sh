@@ -27,6 +27,7 @@ do
         --save_steps 1000 \
         --power $PSI \
         --sim_margin True \
+        --noise 500\
         --logging_dir ./runs/$MODEL_NAME \
         --gradient_checkpointing_kwargs '{"use_reentrant": false}'
 done

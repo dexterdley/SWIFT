@@ -24,6 +24,7 @@ from .torchacc_mixin import TorchAccMixin
 
 criterion = nn.CrossEntropyLoss(ignore_index=-100, reduction='none')
 cosine_sim = nn.CosineSimilarity(dim=1, eps=1e-6)
+min_per_position = -1e-9
 
 def compute_entropy(target_probs, pred_probs, mask=None):
     if mask != None:
@@ -254,7 +255,8 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
                 angular_similarity_margin = torch.acos(cosine_similarity) / torch.tensor(np.pi).to(cosine_similarity.device)
 
                 if "deepseek-vl" in self.args.logging_dir and len(angular_similarity_margin) > BS:  # For deepseek high and low heads
-                    angular_similarity_margin = (angular_similarity_margin[:BS] + angular_similarity_margin[BS:]) / 2
+                    # angular_similarity_margin = (angular_similarity_margin[:BS] + angular_similarity_margin[BS:]) / 2
+                    angular_similarity_margin = angular_similarity_margin[BS:] #use siglip head
 
                 elif len(angular_similarity_margin) > BS:
                     angular_similarity_margin = angular_similarity_margin.unsqueeze(1).mean(0) #pool vit outputs
@@ -278,21 +280,19 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             logits, cd_logits = outputs['logits'], cd_outputs['logits']
             probs, cd_probs = F.softmax(logits, -1), F.softmax(cd_logits, -1)
 
-            if self.args.sim_margin: # VORD term: max(P(y|v̂, x) - P(y|v, x) + m, 0)^ψ    
-                # V3 Decoding ver
+            if self.args.sim_margin: # VORD term: (P(y|v̂, x) >= P(y|v, x) + m)
                 margin = angular_similarity_margin.unsqueeze(1).unsqueeze(1)
                 ordinal_mask = (cd_probs >= (probs + margin).clamp(max=1) ).bool()
             else:
                 ordinal_mask = (cd_probs >= probs ).bool()
 
             # Apply VORD and compute loss
-            min_per_position = logits.min(dim=-1, keepdim=True)[0]
             vord_logits = logits * ~ordinal_mask
             vord_logits += ordinal_mask * min_per_position
 
             vord_logits = vord_logits[:, :-1, :][mask]
             shift_labels = labels[:, 1:][mask]
-                
+
             if num_items_in_batch is not None and self.args.use_vord:
                 loss = criterion(vord_logits, shift_labels)
                 # Focal term
@@ -303,6 +303,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
                 loss = outputs['loss']
 
             self.state.num_violations = ordinal_mask.float().sum()
+            self.state.signal_noise_ratio = (~ordinal_mask * probs).sum(-1).mean()/(ordinal_mask * probs).sum(-1).mean() #Signal-noise ratio
             self.state.xent_loss = outputs['loss']
             self.state.ordinal_ent = compute_entropy(cd_probs[:, :-1, :][mask], probs[:, :-1, :][mask]) #want them to be far
             self.state.ent_probs = compute_entropy(probs[:, :-1, :][mask], probs[:, :-1, :][mask])

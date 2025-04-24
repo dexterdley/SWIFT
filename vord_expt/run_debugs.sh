@@ -1,10 +1,10 @@
 MODELS=(
-  #"AI-ModelScope/paligemma-3b-pt-224"
-  "deepseek-ai/deepseek-vl-7b-chat"
+  "AI-ModelScope/paligemma-3b-pt-224"
+  #"deepseek-ai/deepseek-vl-7b-chat"
   #deepseek-ai/deepseek-vl2-small
 )
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
-USE_VORD_BOOLS=(true)
+USE_VORD_BOOLS=(true false)
 PSI=0
 
 for MODEL in "${MODELS[@]}"
@@ -41,9 +41,9 @@ do
           --max_steps 500 \
           --full_determinism True\
           --use_vord $USE_VORD \
-          --noise 0.5\
+          --noise 500 \
           --add_version False
-      
+
       CKPT_DIR="${MODEL_DIR}/checkpoint-500/"
       for TESTSET in MME #RealWorldQA
       do

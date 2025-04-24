@@ -108,3 +108,62 @@ def plot_margin(file_paths, margin_file_path, loss_type, save_file, smoothing_we
 plot_loss(file_paths_violations, '# of violations', save_file="paligemma_violations.pdf", smoothing_weight=0.97, start=0)
 plot_loss(file_paths_ordinal_ent, 'KL Divergence', save_file="paligemma_ordinal_ent.pdf", smoothing_weight=0.98, start=25)
 plot_margin(file_paths_ordinal_ent, margin_file_path, 'KL Divergence/mθ', save_file="paligemma_ordinal_ent_margin.pdf", smoothing_weight=0.98, start=30)
+
+#%%
+# Data
+methods = ['Baseline', 'VORD']
+scores1 = np.array([1399.85, 1580.75]) # First score for each method
+scores2 = np.array([225.00, 320.00])   # Second score for each method
+
+# Calculate the combined and scaled score as specified
+scaling_factor = 2800
+scores = (scores1 + scores2) / scaling_factor
+scores *= 100
+print(f"Baseline Combined Scaled Score: {scores[0]:.4f}")
+print(f"VORD Combined Scaled Score: {scores[1]:.4f}")
+
+# Bar width (adjust as needed for clarity)
+bar_width = 0.4 # Slightly smaller width might look better when not adjacent
+
+# Positions of the bars on the x-axis
+x_positions = [0.5, 1.0] # [0, 1]
+
+# Create the plot
+fig, ax = plt.subplots(figsize=(4,9))
+ax = plt.gca() # Get the current axes for grid control
+
+# Create bars for the combined scaled scores, assigning labels
+bar_baseline = plt.bar(x_positions[0], scores[0], color='skyblue', width=bar_width, edgecolor='grey', label='Base')
+bar_vord = plt.bar(x_positions[1], scores[1], color='lightcoral', width=bar_width, edgecolor='black', linewidth=2.5, label='VORD')
+
+# Add numerical labels on top of the bars
+# Iterate through bars and their corresponding scores
+for i, bar in enumerate([bar_baseline, bar_vord]):
+    yval = bar[0].get_height()# Get height from the rectangle object
+    # Use x_positions[i] for the text x-coordinate
+    plt.text(x_positions[i], yval, f'{yval:.1f}%', ha='center', va='bottom') # Using .3f for slightly more precision
+
+
+# Add labels and title
+# plt.xlabel('Method', fontweight='bold') # Removed as per your snippet
+plt.ylabel('Accuracy (%)') # Label from your snippet
+
+# Set x-axis ticks and labels
+plt.xticks([]) # Center x-axis labels under the bars
+# Set y-axis limits and ticks as in your snippet
+plt.ylim(45, 70)
+plt.yticks([50, 60])
+
+# Add a grid (only on y-axis for better readability)
+ax.yaxis.grid(True, linestyle='--', alpha=0.7, zorder=0) # Add grid lines on y-axis
+ax.set_axisbelow(True) # Ensure grid lines are behind the bars
+
+# Add legend below the plot
+# bbox_to_anchor defines the position relative to the axes (0,0 is bottom-left, 1,1 is top-right)
+# loc='upper center' anchors the upper center of the legend box to the bbox_to_anchor coordinates
+plt.tight_layout() # Adjust layout to make space for the legend below
+fig.subplots_adjust(bottom=0.175, wspace=0.3, hspace=0.0)
+handles, labels = ax.get_legend_handles_labels()
+fig.legend(handles, labels, loc='lower right', ncol=1, fontsize=26)
+# Show the plot
+plt.show()
