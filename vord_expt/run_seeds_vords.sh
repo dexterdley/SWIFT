@@ -58,14 +58,13 @@ for MODEL in "${MODELS[@]}"; do
             --deepspeed zero2 \
             --data_seed $SEED \
             --add_version False \
-            --full_determinism True \
             --use_vord $USE_VORD \
             --noise 1.0 \
             --report_to "tensorboard" "wandb"
 
         CKPT_DIR="${MODEL_DIR}/checkpoint-19324/"
         if [ -d "$CKPT_DIR" ]; then
-          for TESTSET in MME POPE BLINK HallusionBench MMVet; do # You can add "RealWorldQA" back if needed
+          for TESTSET in MME POPE BLINK HallusionBench MMStar; do # You can add "RealWorldQA" back if needed
             echo "EVALUATING: ${CKPT_DIR}, ${TESTSET}"
             
             CUDA_VISIBLE_DEVICES=7 \

@@ -24,7 +24,7 @@ from .torchacc_mixin import TorchAccMixin
 
 criterion = nn.CrossEntropyLoss(ignore_index=-100, reduction='none')
 cosine_sim = nn.CosineSimilarity(dim=1, eps=1e-6)
-min_per_position = -1e-9
+eps = -1e-9
 
 def compute_entropy(target_probs, pred_probs, mask=None):
     if mask != None:
@@ -280,13 +280,14 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             logits, cd_logits = outputs['logits'], cd_outputs['logits']
             probs, cd_probs = F.softmax(logits, -1), F.softmax(cd_logits, -1)
 
-            if self.args.sim_margin: # VORD term: (P(y|v̂, x) >= P(y|v, x) + m)
+            if self.args.sim_margin: # VORD term: (P(y|v̂, x) >= P(y|v, x) - m)
                 margin = angular_similarity_margin.unsqueeze(1).unsqueeze(1)
-                ordinal_mask = (cd_probs >= (probs + margin).clamp(max=1) ).bool()
+                ordinal_mask = (cd_probs >= (probs + margin).clamp(max=1)).bool()
             else:
-                ordinal_mask = (cd_probs >= probs ).bool()
+                ordinal_mask = (cd_probs >= probs).bool()
 
             # Apply VORD and compute loss
+            min_per_position = logits.min(dim=-1, keepdim=True)[0]
             vord_logits = logits * ~ordinal_mask
             vord_logits += ordinal_mask * min_per_position
 
