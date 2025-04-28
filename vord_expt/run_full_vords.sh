@@ -4,12 +4,14 @@
 # --model swift/llava-v1.6-vicuna-7b-hf \
 # --model AI-ModelScope/paligemma-3b-pt-224 \
 ################## SWIFT ##################
+
 MODELS=(
-  "AI-ModelScope/paligemma-3b-pt-224"
-  #"AI-ModelScope/paligemma2-3b-pt-224"
+  #"AI-ModelScope/paligemma-3b-pt-224"
+  "AI-ModelScope/paligemma2-3b-pt-224"
   #"deepseek-ai/deepseek-vl-7b-chat"
   #"llava-hf/llava-v1.6-vicuna-7b-hf"
 )
+
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 USE_VORD_BOOLS=(true)
 PSI=0

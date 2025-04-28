@@ -8,6 +8,9 @@ Created on Tue Mar 18 16:25:32 2025
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+from scipy.spatial import ConvexHull
+from scipy import interpolate
+import matplotlib.patches as patches
 
 root = "/home/dex/Downloads/"
 def moving_average(data, smoothing_weight=0.99, start=0):
@@ -55,6 +58,11 @@ file_paths_ordinal_ent = {
     'VORD': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-vord-true-low-tag-train_log_ordinal_ent.csv",
 }
 
+file_paths_SNR = {
+    'Base': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-vord-false-tag-train_log_signal_noise_ratio.csv",
+    'VORD': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-vord-true-tag-train_log_signal_noise_ratio.csv",
+}
+
 margin_file_path = root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-vord-true-low-tag-train_log_margin.csv"
 plt.rcParams.update({'font.size': 25})
 
@@ -82,7 +90,7 @@ def plot_loss(file_paths, loss_type, save_file, smoothing_weight=0.99, start=7):
 def plot_margin(file_paths, margin_file_path, loss_type, save_file, smoothing_weight=0.99, start=10):
     """Plots the loss over steps for given file paths."""
     plt.figure(figsize=(6,5))
-    margin_df = df = pd.read_csv(margin_file_path)
+    margin_df = pd.read_csv(margin_file_path)
     for label, file_path in file_paths.items():
         df = pd.read_csv(file_path)
         if start is not None:
@@ -100,6 +108,58 @@ def plot_margin(file_paths, margin_file_path, loss_type, save_file, smoothing_we
         plt.ylim(0.15, 0.55)
     plt.show()
 
+def draw_cluster(axs, x, y, c='cyan'):
+    points = np.stack([x, y ]).T
+    hull = ConvexHull(points)
+    x_hull = np.append(points[hull.vertices,0],
+                       points[hull.vertices,0][0])
+    y_hull = np.append(points[hull.vertices,1],
+                       points[hull.vertices,1][0])
+    
+    dist = np.sqrt((x_hull[:-1] - x_hull[1:])**2 + (y_hull[:-1] - y_hull[1:])**2)
+    dist_along = np.concatenate(([0], dist.cumsum()))
+    #spline, u = interpolate.splprep([x_hull, y_hull], u=dist_along, s=0, per=1)
+    spline, u = interpolate.splprep([x_hull, y_hull], u=dist_along)
+    interp_d = np.linspace(dist_along[0], dist_along[-1], 50)
+    interp_x, interp_y = interpolate.splev(interp_d, spline)
+    
+    axs.fill(interp_x, interp_y, alpha=0.1, color=c)
+
+def plot_scatter_patterns(x_file_paths, y_file_paths, x_label, y_label, save_file, smoothing_weight=0.9, start=0):
+    """
+    Plots scatter patterns between two metrics over steps.
+    """
+    plt.figure(figsize=(6, 5))
+    ax = plt.gca()
+    
+    colors = ['b', 'y']
+    
+    for i, key in enumerate(x_file_paths):
+        x_file_path = x_file_paths[key]
+        y_file_path = y_file_paths[key]
+
+        x_df = pd.read_csv(x_file_path)
+        y_df = pd.read_csv(y_file_path)
+        
+        # Apply smoothing
+        smoothed_x = moving_average(x_df[start:-1]['Value'], smoothing_weight, start=start)
+        smoothed_y = moving_average(y_df[start:-1]['Value'], smoothing_weight, start=start)
+
+        # Note: The original scatter plot had `3000 - smoothed_x`.
+        # Assuming this is a desired transformation, apply it here.
+        # If not, use `smoothed_x` directly.
+        plt.scatter(3000 - smoothed_x, smoothed_y, label=key, alpha=0.8)
+        draw_cluster(ax, 3000 - smoothed_x, smoothed_y, c=colors[i])
+    
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.legend()
+    plt.grid(True)
+
+    plt.savefig("./asset/" + save_file, format="pdf", bbox_inches="tight")
+    plt.show()
+
+
 #plot_loss(file_paths_vord, 'VORD Loss', save_file="deepseek_vl_vord.pdf", smoothing_weight=0.5)
 #plot_loss(file_paths_gradnorm, 'Gradient Norm', save_file="deepseek_vl_gradnorm.pdf", smoothing_weight=0.90)
 #plot_loss(file_paths_train_acc, 'Training Accuracy', save_file="deepseek_vl_train_acc.pdf", smoothing_weight=0.95)
@@ -107,7 +167,9 @@ def plot_margin(file_paths, margin_file_path, loss_type, save_file, smoothing_we
 
 plot_loss(file_paths_violations, '# of violations', save_file="paligemma_violations.pdf", smoothing_weight=0.97, start=0)
 plot_loss(file_paths_ordinal_ent, 'KL Divergence', save_file="paligemma_ordinal_ent.pdf", smoothing_weight=0.98, start=25)
+plot_loss(file_paths_SNR, 'Signal-to-Noise ratio', save_file="paligemma_snr.pdf", smoothing_weight=0.95, start=0)
 plot_margin(file_paths_ordinal_ent, margin_file_path, 'KL Divergence/mθ', save_file="paligemma_ordinal_ent_margin.pdf", smoothing_weight=0.98, start=30)
+plot_scatter_patterns(file_paths_violations, file_paths_SNR, "Violations reduced", "Signal-to-Noise ratio", save_file="paligemma_snr_violations.pdf", smoothing_weight=0.9, start=35)
 
 #%%
 # Data
@@ -132,38 +194,52 @@ x_positions = [0.5, 1.0] # [0, 1]
 fig, ax = plt.subplots(figsize=(4,9))
 ax = plt.gca() # Get the current axes for grid control
 
-# Create bars for the combined scaled scores, assigning labels
 bar_baseline = plt.bar(x_positions[0], scores[0], color='skyblue', width=bar_width, edgecolor='grey', label='Base')
 bar_vord = plt.bar(x_positions[1], scores[1], color='lightcoral', width=bar_width, edgecolor='black', linewidth=2.5, label='VORD')
 
-# Add numerical labels on top of the bars
-# Iterate through bars and their corresponding scores
+
 for i, bar in enumerate([bar_baseline, bar_vord]):
     yval = bar[0].get_height()# Get height from the rectangle object
-    # Use x_positions[i] for the text x-coordinate
     plt.text(x_positions[i], yval, f'{yval:.1f}%', ha='center', va='bottom') # Using .3f for slightly more precision
 
 
-# Add labels and title
 # plt.xlabel('Method', fontweight='bold') # Removed as per your snippet
 plt.ylabel('Accuracy (%)') # Label from your snippet
 
-# Set x-axis ticks and labels
-plt.xticks([]) # Center x-axis labels under the bars
-# Set y-axis limits and ticks as in your snippet
+plt.xticks([])
 plt.ylim(45, 70)
 plt.yticks([50, 60])
 
-# Add a grid (only on y-axis for better readability)
-ax.yaxis.grid(True, linestyle='--', alpha=0.7, zorder=0) # Add grid lines on y-axis
-ax.set_axisbelow(True) # Ensure grid lines are behind the bars
+ax.yaxis.grid(True, linestyle='--', alpha=0.7, zorder=0)
+ax.set_axisbelow(True)
 
-# Add legend below the plot
-# bbox_to_anchor defines the position relative to the axes (0,0 is bottom-left, 1,1 is top-right)
-# loc='upper center' anchors the upper center of the legend box to the bbox_to_anchor coordinates
-plt.tight_layout() # Adjust layout to make space for the legend below
 fig.subplots_adjust(bottom=0.175, wspace=0.3, hspace=0.0)
 handles, labels = ax.get_legend_handles_labels()
 fig.legend(handles, labels, loc='lower right', ncol=1, fontsize=26)
-# Show the plot
+plt.show()
+#%%
+plt.rcParams.update({'font.size': 15})
+
+# Define the data
+x_noise = [0, 250, 500, 750, 999]
+scores = np.array([[1184.08, 242.5],
+                   [1236.75, 269.64],
+                   [1260.75, 320],
+                   [1260.75, 301.1],
+                   [1286.4, 281.78]])
+
+fig, axs = plt.subplots(1, 3, figsize=(12, 3))
+axs[0].plot(x_noise, scores[:, 0], '-o', label='Column 1 Scores')
+axs[1].plot(x_noise, scores[:, 1], '-o', label='Column 2 Scores')
+axs[2].plot(x_noise, scores.sum(-1), '-o', label='Column 2 Scores')
+
+axs[0].set_ylabel('Perception Score')
+axs[1].set_ylabel('Reasoning Score')
+axs[2].set_ylabel('Total Score')
+
+for i in range(3):
+    axs[i].grid('True')
+    axs[i].set_xlabel('Corruption steps')
+
+plt.tight_layout()
 plt.show()

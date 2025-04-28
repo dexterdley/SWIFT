@@ -4,12 +4,12 @@
 # --model AI-ModelScope/paligemma-3b-pt-224 \
 ################## SWIFT ##################
 
-for MODEL in deepseek-vl-7b-chat-finetune-vord0-margin-diffusion-mask-decode-vord-true
+for MODEL in deepseek-vl-7b-chat-finetune-vord0-margin-diffusion-mask-decode-vord-true-500
 do
   
     MODEL_DIR="./checkpoints/AI-ModelScope/LLaVA-Instruct-150K/${MODEL}/checkpoint-9662/"
 
-    for DATASET in MME POPE BLINK HallusionBench MMStar
+    for DATASET in POPE BLINK HallusionBench MMStar
     do
         echo "EVALUATING: ${MODEL_DIR}, ${DATASET} $BACKBONE"
 
