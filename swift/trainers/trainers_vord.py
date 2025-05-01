@@ -282,30 +282,35 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
 
             if self.args.sim_margin: # VORD term: (P(y|v̂, x) >= P(y|v, x) - m)
                 margin = angular_similarity_margin.unsqueeze(1).unsqueeze(1)
-                ordinal_mask = (cd_probs >= (probs + margin).clamp(max=1)).bool()
+                ordinal_mask = (cd_probs > (probs + margin).clamp(max=1)).bool() # try logits ver next
             else:
-                ordinal_mask = (cd_probs >= probs).bool()
+                ordinal_mask = (cd_probs > probs).bool()
 
             # Apply VORD and compute loss
-            min_per_position = logits.min(dim=-1, keepdim=True)[0]
+            min_per_position = logits.min(dim=-1, keepdim=True)[0].detach()
             vord_logits = logits * ~ordinal_mask
             vord_logits += ordinal_mask * min_per_position
 
             vord_logits = vord_logits[:, :-1, :][mask]
             shift_labels = labels[:, 1:][mask]
+            vord_loss = criterion(vord_logits, shift_labels)
+            
+            # if self.args.power > 0:
+            #    focal = (1 - torch.exp(-vord_loss)).pow(self.args.power) # Focal term
+            #    vord_loss *= focal
 
-            if num_items_in_batch is not None and self.args.use_vord:
-                loss = criterion(vord_logits, shift_labels)
-                # Focal term
-                focal = (1 - torch.exp(-loss)).pow(self.args.power)
-                loss *= focal
-                loss = loss.sum() / num_items_in_batch
+            if num_items_in_batch is not None:
+                vord_loss = vord_loss.sum() / num_items_in_batch
             else:
-                loss = outputs['loss']
+                vord_loss = vord_loss.mean()
 
+            if self.args.use_vord:
+                loss = vord_loss
+            
             self.state.num_violations = ordinal_mask.float().sum()
             self.state.signal_noise_ratio = (~ordinal_mask * probs).sum(-1).mean()/(ordinal_mask * probs).sum(-1).mean() #Signal-noise ratio
             self.state.xent_loss = outputs['loss']
+            self.state.vord_loss = vord_loss
             self.state.ordinal_ent = compute_entropy(cd_probs[:, :-1, :][mask], probs[:, :-1, :][mask]) #want them to be far
             self.state.ent_probs = compute_entropy(probs[:, :-1, :][mask], probs[:, :-1, :][mask])
             self.state.ent_cd_probs = compute_entropy(cd_probs[:, :-1, :][mask], cd_probs[:, :-1, :][mask])
