@@ -282,13 +282,14 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
 
             if self.args.sim_margin: # VORD term: (P(y|v̂, x) >= P(y|v, x) - m)
                 margin = angular_similarity_margin.unsqueeze(1).unsqueeze(1)
-                ordinal_mask = (cd_probs > (probs + margin).clamp(max=1)).bool() # try logits ver next
+                ordinal_mask = (cd_probs >= (probs + margin).clamp(max=1)).bool()
             else:
-                ordinal_mask = (cd_probs > probs).bool()
+                ordinal_mask = (cd_probs >= probs).bool()
 
             # Apply VORD and compute loss
-            min_per_position = logits.min(dim=-1, keepdim=True)[0].detach()
-            vord_logits = logits * ~ordinal_mask
+            max_prob_mask = (probs == probs.max(dim=-1, keepdim=True)[0])
+            min_per_position = logits.min(dim=-1, keepdim=True)[0]
+            vord_logits = logits * (~ordinal_mask | max_prob_mask)
             vord_logits += ordinal_mask * min_per_position
 
             vord_logits = vord_logits[:, :-1, :][mask]

@@ -6,9 +6,9 @@
 ################## SWIFT ##################
 
 MODELS=(
-  "deepseek-ai/deepseek-vl-7b-chat"
   "AI-ModelScope/paligemma-3b-pt-224"
   "AI-ModelScope/paligemma2-3b-pt-224"
+  "deepseek-ai/deepseek-vl-7b-chat"
   #"llava-hf/llava-v1.6-vicuna-7b-hf"
 )
 
@@ -24,7 +24,7 @@ do
     do
       # Extract the model name for the output directory
       MODEL_BASENAME=$(basename "$MODEL")
-      MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-vord-${USE_VORD}-${NOISE}-le"
+      MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-vord-${USE_VORD}-${NOISE}-logits"
       MODEL_DIR="./checkpoints/$MODEL_NAME"
       LOGGING_DIR="./runs/$MODEL_NAME"
 
@@ -74,7 +74,7 @@ done
 for MODEL in "${MODELS[@]}"
 do 
   MODEL_BASENAME=$(basename "$MODEL")
-  MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-vord-${USE_VORD}-${NOISE}-le"
+  MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-vord-${USE_VORD}-${NOISE}-logits"
   MODEL_DIR="./checkpoints/$MODEL_NAME"
   cat ${MODEL_DIR}/checkpoint-9662/eval_result.jsonl
 done
