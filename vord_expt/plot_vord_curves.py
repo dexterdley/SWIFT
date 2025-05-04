@@ -49,25 +49,27 @@ file_paths_xent = {
 
 file_paths_violations = {
     'Base': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-vord-false-low-tag-train_log_num_violations.csv",
+    'VCD': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-VCD-500-tag-train_log_num_violations.csv",
     'VORD': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-vord-true-low-tag-train_log_num_violations.csv",
 }
-
 file_paths_ordinal_ent = {
     'Base': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-vord-false-low-tag-train_log_ordinal_ent.csv",
+    'VCD': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-VCD-500-tag-train_log_ordinal_ent.csv",
     'VORD': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-vord-true-low-tag-train_log_ordinal_ent.csv",
 }
 
 file_paths_SNR = {
     'Base': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-vord-false-tag-train_log_signal_noise_ratio.csv",
+    'VCD': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-VCD-500-tag-train_log_signal_noise_ratio.csv",
     'VORD': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-vord-true-tag-train_log_signal_noise_ratio.csv",
 }
 
 margin_file_path = root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-vord-true-low-tag-train_log_margin.csv"
-plt.rcParams.update({'font.size': 25})
+plt.rcParams.update({'font.size': 20})
 
 def plot_loss(file_paths, loss_type, save_file, smoothing_weight=0.99, start=7):
     """Plots the loss over steps for given file paths."""
-    plt.figure(figsize=(6,5))
+    plt.figure(figsize=(5,4))
     for label, file_path in file_paths.items():
         df = pd.read_csv(file_path)
         
@@ -79,7 +81,7 @@ def plot_loss(file_paths, loss_type, save_file, smoothing_weight=0.99, start=7):
     plt.xlabel('Steps')
     plt.ylabel(loss_type)
     #plt.title('Train Loss over Steps')
-    plt.legend()
+    plt.legend(loc="upper right")
     plt.grid(True)
     plt.savefig("./asset/" + save_file, format="pdf", bbox_inches="tight")
     if loss_type == "VORD Loss":
@@ -88,7 +90,7 @@ def plot_loss(file_paths, loss_type, save_file, smoothing_weight=0.99, start=7):
     
 def plot_margin(file_paths, margin_file_path, loss_type, save_file, smoothing_weight=0.99, start=10):
     """Plots the loss over steps for given file paths."""
-    plt.figure(figsize=(6,5))
+    plt.figure(figsize=(5,4))
     margin_df = pd.read_csv(margin_file_path)
     for label, file_path in file_paths.items():
         df = pd.read_csv(file_path)
@@ -128,10 +130,10 @@ def plot_scatter_patterns(x_file_paths, y_file_paths, x_label, y_label, save_fil
     """
     Plots scatter patterns between two metrics over steps.
     """
-    plt.figure(figsize=(6, 5))
+    plt.figure(figsize=(5, 4))
     ax = plt.gca()
     
-    colors = ['b', 'y']
+    colors = ['b', 'y', 'g']
     
     for i, key in enumerate(x_file_paths):
         x_file_path = x_file_paths[key]

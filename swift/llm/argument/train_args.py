@@ -28,8 +28,8 @@ class Seq2SeqTrainingOverrideArguments(TrainArgumentsMixin, Seq2SeqTrainingArgum
 
     power: int = field(default=2)
     sim_margin: bool = field(default=True)
-    use_vord: bool = field(default=True)
     noise: float = field(default=1.0)
+    use_vord: str = field(default="VORD")
 
     def _init_output_dir(self):
         if self.output_dir is None:

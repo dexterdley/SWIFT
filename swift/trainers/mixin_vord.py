@@ -309,7 +309,6 @@ class SwiftMixinVORD:
             logs['log_vord_loss'] = self.state.vord_loss.item()
             logs['log_ordinal_ent'] = self.state.ordinal_ent.item()
             logs['log_ent_probs'] = self.state.ent_probs.item()
-            logs['log_ent_cd_probs'] = self.state.ent_cd_probs.item()
             logs['log_num_violations'] = self.state.num_violations.item()
             logs['log_signal_noise_ratio'] = self.state.signal_noise_ratio.item()
 

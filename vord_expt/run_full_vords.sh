@@ -13,7 +13,7 @@ MODELS=(
 )
 
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
-USE_VORD_BOOLS=(true)
+USE_VORD_BOOLS=("VORD")
 PSI=0
 
 for MODEL in "${MODELS[@]}"
@@ -24,7 +24,7 @@ do
     do
       # Extract the model name for the output directory
       MODEL_BASENAME=$(basename "$MODEL")
-      MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-vord-${USE_VORD}-${NOISE}-logits"
+      MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-${USE_VORD}-${NOISE}-v2"
       MODEL_DIR="./checkpoints/$MODEL_NAME"
       LOGGING_DIR="./runs/$MODEL_NAME"
 
@@ -74,7 +74,7 @@ done
 for MODEL in "${MODELS[@]}"
 do 
   MODEL_BASENAME=$(basename "$MODEL")
-  MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-vord-${USE_VORD}-${NOISE}-logits"
+  MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-${USE_VORD}-${NOISE}-v2"
   MODEL_DIR="./checkpoints/$MODEL_NAME"
   cat ${MODEL_DIR}/checkpoint-9662/eval_result.jsonl
 done

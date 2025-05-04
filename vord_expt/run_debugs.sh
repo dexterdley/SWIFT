@@ -4,7 +4,7 @@ MODELS=(
   #deepseek-ai/deepseek-vl2-small
 )
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
-USE_VORD_BOOLS=(true false)
+USE_VORD_BOOLS=("VORD" "BASE")
 PSI=0
 
 for MODEL in "${MODELS[@]}"

@@ -22,31 +22,15 @@ from .arguments import Seq2SeqTrainingArguments, TrainingArguments
 from .mixin_vord import SwiftMixinVORD
 from .torchacc_mixin import TorchAccMixin
 
-criterion = nn.CrossEntropyLoss(ignore_index=-100, reduction='none')
+criterion = nn.CrossEntropyLoss(reduction='none')
 cosine_sim = nn.CosineSimilarity(dim=1, eps=1e-6)
-eps = -1e-9
+eps = -1e6
 
 def compute_entropy(target_probs, pred_probs, mask=None):
     if mask != None:
         return -torch.sum(target_probs * torch.log( pred_probs.clamp(1e-4) ) , dim=-1)[mask].mean()
     else:
         return -torch.sum(target_probs * torch.log( pred_probs.clamp(1e-4) ) , dim=-1).mean()
-
-def mixup_process(x, y, mixup_alpha=1.0):
-    B = x.shape[0]
-    N = len(x.shape)
-    indices = torch.randperm(B).to(x.device)
-
-    while torch.any(indices == torch.arange(B).to(x.device)):
-        indices = torch.randperm(B).to(x.device) # disallow repeats, i.e., x[0] and x[0] again
-
-    if mixup_alpha == 1.0:
-        lam_shape = (B,) + (1,) * (N-1)
-        lam = 0.5 * torch.distributions.Beta(mixup_alpha, mixup_alpha).sample(lam_shape).to(x.device)
-    else:
-        lam = 1.0
-    x_mix = x * (1 - lam) + x[indices] * lam
-    return x_mix, lam
 
 def add_diffusion_noise(image_tensor, noise_step):
     num_steps = 1000  # Number of diffusion steps
@@ -231,11 +215,8 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
                 ViT = unwrapped_model.visual
 
         # Here
-        #images_cd = gaussian_noise(inputs['pixel_values'], bound=self.args.noise)
         images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=int(self.args.noise)) #around 200
 
-        #images_cd, _ = mixup_process(inputs['pixel_values'], inputs['labels'])
-        #images_cd = add_diffusion_noise(images_cd, noise_step=500)
         #images_cd = torch.zeros_like(inputs['pixel_values']).to('cuda')
         #images_cd = torch.randn_like(inputs['pixel_values']).to('cuda') * inputs['pixel_values']
         cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
@@ -278,34 +259,38 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             # Here
             mask = (labels[:, 1:] != -100)
             logits, cd_logits = outputs['logits'], cd_outputs['logits']
-            probs, cd_probs = F.softmax(logits, -1), F.softmax(cd_logits, -1)
+            probs, cd_probs = F.softmax(logits, -1).detach(), F.softmax(cd_logits, -1).detach()
 
-            if self.args.sim_margin: # VORD term: (P(y|v̂, x) >= P(y|v, x) - m)
+            if self.args.sim_margin: # VORD term: (P(y|v̂, x) >= P(y|v, x) + m)
                 margin = angular_similarity_margin.unsqueeze(1).unsqueeze(1)
-                ordinal_mask = (cd_probs >= (probs + margin).clamp(max=1)).bool()
-            else:
-                ordinal_mask = (cd_probs >= probs).bool()
+                ordinal_mask = (cd_probs > (probs + margin).clamp(max=1)).bool()
 
-            # Apply VORD and compute loss
-            max_prob_mask = (probs == probs.max(dim=-1, keepdim=True)[0])
-            min_per_position = logits.min(dim=-1, keepdim=True)[0]
-            vord_logits = logits * (~ordinal_mask | max_prob_mask)
-            vord_logits += ordinal_mask * min_per_position
+            else:
+                ordinal_mask = (cd_probs > probs).bool()
+
+            if self.args.use_vord == 'VCD':
+                vord_logits = (2 * logits - cd_logits)
+
+            else:
+                # Apply VORD and compute loss
+                min_per_position = logits.min(dim=-1, keepdim=True)[0].detach()
+                vord_logits = logits.clone()
+                vord_logits[ordinal_mask] = (ordinal_mask * min_per_position)[ordinal_mask]
 
             vord_logits = vord_logits[:, :-1, :][mask]
             shift_labels = labels[:, 1:][mask]
             vord_loss = criterion(vord_logits, shift_labels)
-            
-            # if self.args.power > 0:
-            #    focal = (1 - torch.exp(-vord_loss)).pow(self.args.power) # Focal term
-            #    vord_loss *= focal
+                
+            if self.args.power > 0:
+                focal = (1 - torch.exp(-vord_loss)).pow(self.args.power) # Focal term
+                vord_loss *= focal
 
             if num_items_in_batch is not None:
                 vord_loss = vord_loss.sum() / num_items_in_batch
             else:
                 vord_loss = vord_loss.mean()
 
-            if self.args.use_vord:
+            if self.args.use_vord == "VORD" or self.args.use_vord == "VCD":
                 loss = vord_loss
             
             self.state.num_violations = ordinal_mask.float().sum()
@@ -314,7 +299,6 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             self.state.vord_loss = vord_loss
             self.state.ordinal_ent = compute_entropy(cd_probs[:, :-1, :][mask], probs[:, :-1, :][mask]) #want them to be far
             self.state.ent_probs = compute_entropy(probs[:, :-1, :][mask], probs[:, :-1, :][mask])
-            self.state.ent_cd_probs = compute_entropy(cd_probs[:, :-1, :][mask], cd_probs[:, :-1, :][mask])
 
             if self.args.sim_margin:
                 self.state.margin = angular_similarity_margin.unsqueeze(1).mean()
