@@ -7,8 +7,8 @@
 
 MODELS=(
   "AI-ModelScope/paligemma-3b-pt-224"
-  "AI-ModelScope/paligemma2-3b-pt-224"
-  "deepseek-ai/deepseek-vl-7b-chat"
+  # "AI-ModelScope/paligemma2-3b-pt-224"
+  # "deepseek-ai/deepseek-vl-7b-chat"
   #"llava-hf/llava-v1.6-vicuna-7b-hf"
 )
 
@@ -55,7 +55,7 @@ do
           --report_to tensorboard
 
       CKPT_DIR="${MODEL_DIR}/checkpoint-9662/"
-      for TESTSET in MME #POPE BLINK HallusionBench MMStar
+      for TESTSET in MME POPE BLINK HallusionBench MMStar
       do
         echo "EVALUATING: ${CKPT_DIR}, ${TESTSET} $BACKBONE"
 

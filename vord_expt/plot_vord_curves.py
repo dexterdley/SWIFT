@@ -221,7 +221,7 @@ handles, labels = ax.get_legend_handles_labels()
 fig.legend(handles, labels, loc='lower right', ncol=1, fontsize=26)
 plt.show()
 #%%
-plt.rcParams.update({'font.size': 15})
+plt.rcParams.update({'font.size': 20})
 
 # Define the data
 x_noise = [0, 250, 500, 750, 999]
@@ -261,60 +261,32 @@ plt.show()
 #%%
 # Calculate Total Scores
 total_scores1 = scores1.sum(axis=-1)
-total_scores2 = scores2.sum(axis=-1)
 
-# Baselines at 0 corruption steps
 perception1_baseline = scores1[0, 0]
 reasoning1_baseline = scores1[0, 1]
 total1_baseline = total_scores1[0]
 
-perception2_baseline = scores2[0, 0]
-reasoning2_baseline = scores2[0, 1]
-total2_baseline = total_scores2[0]
-
 # Calculate change from baseline
-scores1_perception_change = scores1[:, 0] - perception1_baseline
-scores1_reasoning_change = scores1[:, 1] - reasoning1_baseline
-scores1_total_change = total_scores1 - total1_baseline
-
-scores2_perception_change = scores2[:, 0] - perception2_baseline
-scores2_reasoning_change = scores2[:, 1] - reasoning2_baseline
-scores2_total_change = total_scores2 - total2_baseline
+scores1_perception_change = (scores1[:, 0] - perception1_baseline)/perception1_baseline * 100
+scores1_reasoning_change = (scores1[:, 1] - reasoning1_baseline)/reasoning1_baseline * 100
+scores1_total_change = (total_scores1 - total1_baseline)/total1_baseline * 100
 
 
 # --- Replot the data showing Score Change ---
+fig, axs = plt.subplots(1, 1, figsize=(8, 5)) # Increased figsize for better readability
+axs.plot(x_noise, scores1_perception_change, '-o', label='Perception')
+axs.plot(x_noise, scores1_reasoning_change, '-o', label='Recognition')
+axs.plot(x_noise, scores1_total_change, '-o', label='Total')
 
-fig, axs = plt.subplots(1, 3, figsize=(15, 5)) # Increased figsize for better readability
 
-# Plot Perception Score Change
-axs[0].plot(x_noise, scores1_perception_change, '-o', label='PaliGemma')
-axs[0].plot(x_noise, scores2_perception_change, '-o', label='PaliGemma2')
-axs[0].set_ylabel('Perception Score Change')
-
-# Plot Reasoning Score Change
-axs[1].plot(x_noise, scores1_reasoning_change, '-o', label='PaliGemma')
-axs[1].plot(x_noise, scores2_reasoning_change, '-o', label='PaliGemma2')
-axs[1].set_ylabel('Reasoning Score Change')
-
-# Plot Total Score Change
-axs[2].plot(x_noise, scores1_total_change, '-o', label='PaliGemma')
-axs[2].plot(x_noise, scores2_total_change, '-o', label='PaliGemma2')
-axs[2].set_ylabel('Total Score Change')
-
-# Set common labels and grid
-for i in range(3):
-    axs[i].grid(True) # Use True instead of 'True'
-    axs[i].set_xlabel('Corruption steps')
-    # Add a horizontal line at 0 to show the baseline clearly
-    axs[i].axhline(0, color='grey', linestyle='--', linewidth=0.8)
-
+axs.grid(True) # Use True instead of 'True'
+axs.set_xlabel('Corruption steps')
+axs.set_ylabel('Relative Improvement (%)')
+# Add a horizontal line at 0 to show the baseline clearly
+axs.axhline(0, color='grey', linestyle='--', linewidth=0.8)
+axs.set_xticks([0, 250, 500, 750, 1000])
+axs.xaxis.tick_top()
 
 # Add a single legend outside the plots
-handles, labels = axs[0].get_legend_handles_labels()
-fig.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True, ncol=2)
-
-
-plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust layout to make space for the legend
-plt.suptitle('Model Performance Change Relative to 0 Corruption Steps') # Added a main title
-
-plt.show()
+handles, labels = axs.get_legend_handles_labels()
+plt.legend(labels)

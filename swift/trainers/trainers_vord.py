@@ -263,10 +263,10 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
 
             if self.args.sim_margin: # VORD term: (P(y|v̂, x) >= P(y|v, x) + m)
                 margin = angular_similarity_margin.unsqueeze(1).unsqueeze(1)
-                ordinal_mask = (cd_probs > (probs + margin).clamp(max=1)).bool()
+                ordinal_mask = (cd_probs >= (probs + margin).clamp(max=1)).bool()
 
             else:
-                ordinal_mask = (cd_probs > probs).bool()
+                ordinal_mask = (cd_probs >= probs).bool()
 
             if self.args.use_vord == 'VCD':
                 vord_logits = (2 * logits - cd_logits)
