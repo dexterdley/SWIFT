@@ -8,7 +8,7 @@
 MODELS=(
   "AI-ModelScope/paligemma-3b-pt-224"
   # "AI-ModelScope/paligemma2-3b-pt-224"
-  # "deepseek-ai/deepseek-vl-7b-chat"
+  "deepseek-ai/deepseek-vl-7b-chat"
   #"llava-hf/llava-v1.6-vicuna-7b-hf"
 )
 
@@ -24,7 +24,7 @@ do
     do
       # Extract the model name for the output directory
       MODEL_BASENAME=$(basename "$MODEL")
-      MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-${USE_VORD}-${NOISE}-v2"
+      MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-${USE_VORD}-${NOISE}"
       MODEL_DIR="./checkpoints/$MODEL_NAME"
       LOGGING_DIR="./runs/$MODEL_NAME"
 
