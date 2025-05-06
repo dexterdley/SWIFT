@@ -280,10 +280,6 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             shift_labels = labels[:, 1:][mask]
             vord_loss = criterion(vord_logits, shift_labels)
                 
-            if self.args.power > 0:
-                focal = (1 - torch.exp(-vord_loss)).pow(self.args.power) # Focal term
-                vord_loss *= focal
-
             if num_items_in_batch is not None:
                 vord_loss = vord_loss.sum() / num_items_in_batch
             else:

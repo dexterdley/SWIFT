@@ -7,15 +7,15 @@
 ################## SWIFT ##################
 
 MODELS=(
-  "AI-ModelScope/paligemma2-3b-pt-224"
-  # "AI-ModelScope/paligemma-3b-pt-224"
+  # "AI-ModelScope/paligemma2-3b-pt-224"
+  "AI-ModelScope/paligemma-3b-pt-224"
   # "deepseek-ai/deepseek-vl-7b-chat"
-  # "Qwen/Qwen2.5-VL-3B-Instruct-AWQ"
 )
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 
-USE_VORD_BOOLS=(true)
+USE_VORD_BOOLS=("BASE" "VORD")
 SEEDS=(42 55 69) # Can add 55 69 back if needed
+NOISE=500
 
 for MODEL in "${MODELS[@]}"; do
   for USE_VORD in "${USE_VORD_BOOLS[@]}"; do 
@@ -31,7 +31,7 @@ for MODEL in "${MODELS[@]}"; do
       for PSI in "${PSI_VALUES[@]}"; do
         # Extract the model name for the output directory
         MODEL_BASENAME=$(basename "$MODEL")
-        MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-acc-mask-vord-${USE_VORD}-${SEED}"
+        MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-${USE_VORD}-${NOISE}"
         MODEL_DIR="./checkpoints/$MODEL_NAME"
         LOGGING_DIR="./runs/$MODEL_NAME"
 
@@ -43,7 +43,7 @@ for MODEL in "${MODELS[@]}"; do
             --model "$MODEL" \
             --dataset "$DATASET" \
             --torch_dtype bfloat16 \
-            --per_device_train_batch_size 4 \
+            --per_device_train_batch_size 8 \
             --per_device_eval_batch_size 8 \
             --gradient_checkpointing True \
             --output_dir "$MODEL_DIR" \
@@ -54,12 +54,11 @@ for MODEL in "${MODELS[@]}"; do
             --sim_margin True \
             --logging_dir "$LOGGING_DIR" \
             --eval_limit 100 \
-            --eval_datasets realWorldQA \
+            --eval_datasets MMStar \
             --deepspeed zero2 \
-            --data_seed $SEED \
             --add_version False \
             --use_vord $USE_VORD \
-            --noise 1.0 \
+            --noise $NOISE \
             --report_to "tensorboard" "wandb"
 
         CKPT_DIR="${MODEL_DIR}/checkpoint-19324/"

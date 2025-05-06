@@ -6,14 +6,14 @@
 ################## SWIFT ##################
 
 MODELS=(
-  "AI-ModelScope/paligemma-3b-pt-224"
+  # "AI-ModelScope/paligemma-3b-pt-224"
   # "AI-ModelScope/paligemma2-3b-pt-224"
   "deepseek-ai/deepseek-vl-7b-chat"
   #"llava-hf/llava-v1.6-vicuna-7b-hf"
 )
 
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
-USE_VORD_BOOLS=("VORD")
+USE_VORD_BOOLS=("BASE")
 PSI=0
 
 for MODEL in "${MODELS[@]}"
@@ -47,7 +47,7 @@ do
           --sim_margin True \
           --logging_dir "$LOGGING_DIR" \
           --eval_limit 100 \
-          --eval_datasets realWorldQA \
+          --eval_datasets MMStar \
           --deepspeed zero2 \
           --add_version False \
           --use_vord $USE_VORD \
