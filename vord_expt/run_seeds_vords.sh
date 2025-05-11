@@ -7,14 +7,14 @@
 ################## SWIFT ##################
 
 MODELS=(
-  # "AI-ModelScope/paligemma2-3b-pt-224"
   "AI-ModelScope/paligemma-3b-pt-224"
+  "AI-ModelScope/paligemma2-3b-pt-224"
   # "deepseek-ai/deepseek-vl-7b-chat"
 )
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 
-USE_VORD_BOOLS=("BASE" "VORD")
-SEEDS=(42 55 69) # Can add 55 69 back if needed
+USE_VORD_BOOLS=("VORD")
+SEEDS=(42) # Can add 55 69 back if needed
 NOISE=500
 
 for MODEL in "${MODELS[@]}"; do
@@ -43,14 +43,15 @@ for MODEL in "${MODELS[@]}"; do
             --model "$MODEL" \
             --dataset "$DATASET" \
             --torch_dtype bfloat16 \
-            --per_device_train_batch_size 8 \
-            --per_device_eval_batch_size 8 \
+            --per_device_train_batch_size 4 \
+            --per_device_eval_batch_size 4 \
             --gradient_checkpointing True \
             --output_dir "$MODEL_DIR" \
-            --num_train_epochs 1 \
+            --num_train_epochs 3 \
             --eval_steps 1000 \
             --save_steps 5000 \
             --power $PSI \
+            --seed $SEED \
             --sim_margin True \
             --logging_dir "$LOGGING_DIR" \
             --eval_limit 100 \
@@ -61,7 +62,7 @@ for MODEL in "${MODELS[@]}"; do
             --noise $NOISE \
             --report_to "tensorboard" "wandb"
 
-        CKPT_DIR="${MODEL_DIR}/checkpoint-19324/"
+        CKPT_DIR="${MODEL_DIR}/checkpoint-38649/"
         if [ -d "$CKPT_DIR" ]; then
           for TESTSET in MME POPE BLINK HallusionBench MMStar; do # You can add "RealWorldQA" back if needed
             echo "EVALUATING: ${CKPT_DIR}, ${TESTSET}"

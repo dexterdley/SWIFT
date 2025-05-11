@@ -56,8 +56,9 @@ def add_diffusion_noise(image_tensor, noise_step):
     return image_tensor_cd
 
 def gaussian_noise(x, bound=0.01):
-    diffusion = torch.randn_like(x) * torch.rand(1).clamp(0.1).to(x.device) * bound
-    return 0.5 * x +  0.5 * diffusion
+    lam = torch.distributions.Beta(1,1).sample((x.shape[0], 1, 1, 1)).to(x.device)
+    noise_img = torch.randn_like(x) * torch.rand(1).to(x.device) * bound
+    return lam * x + (1 - lam) * noise_img
 
 class TrainerVORD(SwiftMixinVORD, HfTrainer):
     args: TrainingArguments
@@ -215,8 +216,8 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
                 ViT = unwrapped_model.visual
 
         # Here
-        images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=int(self.args.noise)) #around 200
-
+        images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=int(self.args.noise))
+        #images_cd = gaussian_noise(inputs['pixel_values'], bound=0.25)
         #images_cd = torch.zeros_like(inputs['pixel_values']).to('cuda')
         #images_cd = torch.randn_like(inputs['pixel_values']).to('cuda') * inputs['pixel_values']
         cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
@@ -279,11 +280,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             vord_logits = vord_logits[:, :-1, :][mask]
             shift_labels = labels[:, 1:][mask]
             vord_loss = criterion(vord_logits, shift_labels)
-                
-            if num_items_in_batch is not None:
-                vord_loss = vord_loss.sum() / num_items_in_batch
-            else:
-                vord_loss = vord_loss.mean()
+            vord_loss = vord_loss.sum() / num_items_in_batch if num_items_in_batch else vord_loss.mean()
 
             if self.args.use_vord == "VORD" or self.args.use_vord == "VCD":
                 loss = vord_loss

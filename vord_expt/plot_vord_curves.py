@@ -24,27 +24,31 @@ def moving_average(data, smoothing_weight=0.99, start=0):
 
 # File paths
 file_paths_vord = {
-    'Base': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-vord-false-low-tag-train_log_num_violations.csv",
-    'VORD': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-vord-true-low-tag-train_log_num_violations.csv",
+    'Base': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-vord-false-500-le-tag-train_log_vord_loss.csv",
+    #'VCD': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-VCD-500-tag-train_log_vord_loss.csv",
+    'VORD': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-VORD-500-tag-train_log_vord_loss.csv",
 }
 
 file_paths_entropy_probs = {
-    'Base': root + "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-chat-finetune-vord0-margin-diffusion-mask-decode-vord-false-500-tag-train_log_ent_probs.csv",
-    'VORD': root + "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-chat-finetune-vord0-margin-diffusion-mask-decode-vord-true-500-tag-train_log_ent_probs.csv",
+    'Base': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-vord-false-500-le-tag-train_log_ent_probs.csv",
+    'VORD': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-VORD-500-tag-train_log_ent_probs.csv",
 }
 
 file_paths_gradnorm = {
-    'Base': root + "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-chat-finetune-vord0-margin-diffusion-mask-decode-vord-false-500-tag-train_grad_norm.csv",
-    'VORD': root + "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-chat-finetune-vord0-margin-diffusion-mask-decode-vord-true-500-tag-train_grad_norm.csv",
+    'Base': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-vord-false-500-le-tag-train_grad_norm.csv",
+    'VCD': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-VCD-500-tag-train_grad_norm.csv",
+    'VORD': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-VORD-500-tag-train_grad_norm.csv",
 }
 
 file_paths_train_acc = {
-    'Base': root + "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-chat-finetune-vord0-margin-diffusion-mask-decode-vord-false-500-tag-train_token_acc.csv",
-    'VORD': root + "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-chat-finetune-vord0-margin-diffusion-mask-decode-vord-true-500-tag-train_token_acc.csv",
+    'Base': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-vord-false-500-le-tag-train_token_acc.csv",
+    'VCD': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-VCD-500-tag-train_token_acc.csv",
+    'VORD': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-VORD-500-tag-train_token_acc.csv",
 }
 file_paths_xent = {
-    'Base': root + "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-chat-finetune-vord0-margin-diffusion-mask-decode-vord-false-500-tag-train_log_xent_loss.csv",
-    'VORD': root + "run-AI-ModelScope_LLaVA-Instruct-150K_deepseek-vl-7b-chat-finetune-vord0-margin-diffusion-mask-decode-vord-true-500-tag-train_log_xent_loss.csv",
+    'Base': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-vord-false-500-le-tag-train_log_xent_loss.csv",
+    'VCD': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-VCD-500-tag-train_log_xent_loss.csv",
+    'VORD': root + "run-AI-ModelScope_LLaVA-Instruct-150K_paligemma-3b-pt-224-finetune-vord0-margin-diffusion-mask-decode-VORD-500-tag-train_log_xent_loss.csv",
 }
 
 file_paths_violations = {
@@ -81,11 +85,9 @@ def plot_loss(file_paths, loss_type, save_file, smoothing_weight=0.99, start=7):
     plt.xlabel('Steps')
     plt.ylabel(loss_type)
     #plt.title('Train Loss over Steps')
-    plt.legend(loc="upper right")
+    plt.legend(loc="lower right")
     plt.grid(True)
     plt.savefig("./asset/" + save_file, format="pdf", bbox_inches="tight")
-    if loss_type == "VORD Loss":
-        plt.ylim(0.15, 0.55)
     plt.show()
     
 def plot_margin(file_paths, margin_file_path, loss_type, save_file, smoothing_weight=0.99, start=10):
@@ -161,12 +163,11 @@ def plot_scatter_patterns(x_file_paths, y_file_paths, x_label, y_label, save_fil
     plt.show()
 
 
-#plot_loss(file_paths_vord, 'VORD Loss', save_file="deepseek_vl_vord.pdf", smoothing_weight=0.5)
-
-plot_loss(file_paths_gradnorm, 'Gradient Norm', save_file="deepseek_vl_gradnorm.pdf", smoothing_weight=0.95)
-plot_loss(file_paths_entropy_probs, 'Entropy', save_file="deepseek_vl_ent_probs.pdf", smoothing_weight=0.95)
-plot_loss(file_paths_train_acc, 'Training Accuracy', save_file="deepseek_vl_train_acc.pdf", smoothing_weight=0.95)
-plot_loss(file_paths_xent, 'X-ent Loss', save_file="deepseek_vl_xent.pdf", smoothing_weight=0.85)
+plot_loss(file_paths_vord, 'VORD Loss', save_file="paligemma_vord.pdf", smoothing_weight=0.98)
+plot_loss(file_paths_gradnorm, 'Gradient Norm', save_file="paligemma_gradnorm.pdf", smoothing_weight=0.95)
+plot_loss(file_paths_entropy_probs, 'Entropy', save_file="paligemma_ent_probs.pdf", smoothing_weight=0.95)
+plot_loss(file_paths_train_acc, 'Training Accuracy', save_file="paligemma_train_acc.pdf", smoothing_weight=0.95)
+plot_loss(file_paths_xent, 'X-ent Loss', save_file="paligemma_xent.pdf", smoothing_weight=0.85)
 
 plot_loss(file_paths_violations, '# of violations', save_file="paligemma_violations.pdf", smoothing_weight=0.97, start=0)
 plot_loss(file_paths_ordinal_ent, 'KL Divergence', save_file="paligemma_ordinal_ent.pdf", smoothing_weight=0.98, start=25)
