@@ -177,6 +177,7 @@ plot_scatter_patterns(file_paths_violations, file_paths_SNR, "Violations reduced
 
 #%%
 # Data
+plt.rcParams.update({'font.size': 35})
 methods = ['Baseline', 'VORD']
 scores1 = np.array([1399.85, 1580.75]) # First score for each method
 scores2 = np.array([225.00, 320.00])   # Second score for each method
@@ -189,13 +190,13 @@ print(f"Baseline Combined Scaled Score: {scores[0]:.4f}")
 print(f"VORD Combined Scaled Score: {scores[1]:.4f}")
 
 # Bar width (adjust as needed for clarity)
-bar_width = 0.4 # Slightly smaller width might look better when not adjacent
+bar_width = 0.3 # Slightly smaller width might look better when not adjacent
 
 # Positions of the bars on the x-axis
 x_positions = [0.5, 1.0] # [0, 1]
 
 # Create the plot
-fig, ax = plt.subplots(figsize=(4,9))
+fig, ax = plt.subplots(figsize=(2,9))
 ax = plt.gca() # Get the current axes for grid control
 
 bar_baseline = plt.bar(x_positions[0], scores[0], color='skyblue', width=bar_width, edgecolor='grey', label='Base')
@@ -204,11 +205,11 @@ bar_vord = plt.bar(x_positions[1], scores[1], color='lightcoral', width=bar_widt
 
 for i, bar in enumerate([bar_baseline, bar_vord]):
     yval = bar[0].get_height()# Get height from the rectangle object
-    plt.text(x_positions[i], yval, f'{yval:.1f}%', ha='center', va='bottom') # Using .3f for slightly more precision
+    plt.text(x_positions[i], yval, f'{yval:.0f}', ha='center', va='bottom') # Using .3f for slightly more precision
 
 
 # plt.xlabel('Method', fontweight='bold') # Removed as per your snippet
-plt.ylabel('Accuracy (%)') # Label from your snippet
+plt.ylabel('Accuracy (%)',  fontweight='bold') # Label from your snippet
 
 plt.xticks([])
 plt.ylim(45, 70)
@@ -219,7 +220,7 @@ ax.set_axisbelow(True)
 
 fig.subplots_adjust(bottom=0.175, wspace=0.3, hspace=0.0)
 handles, labels = ax.get_legend_handles_labels()
-fig.legend(handles, labels, loc='lower right', ncol=1, fontsize=26)
+fig.legend(handles, labels, loc='lower center', ncol=1, fontsize=25)
 plt.show()
 #%%
 plt.rcParams.update({'font.size': 20})
