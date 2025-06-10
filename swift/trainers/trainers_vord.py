@@ -203,7 +203,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             else:
                 ViT = unwrapped_model.vision_model
 
-        elif "llava-v1.6" in self.args.logging_dir or "gemma" in self.args.logging_dir:
+        elif "llava" in self.args.logging_dir or "gemma" in self.args.logging_dir:
             if _is_peft_model(unwrapped_model):
                 ViT = unwrapped_model.base_model.model.vision_tower
             else:
@@ -217,9 +217,6 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
 
         # Here
         images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=int(self.args.noise))
-        #images_cd = gaussian_noise(inputs['pixel_values'], bound=0.25)
-        #images_cd = torch.zeros_like(inputs['pixel_values']).to('cuda')
-        #images_cd = torch.randn_like(inputs['pixel_values']).to('cuda') * inputs['pixel_values']
         cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
         
         with torch.no_grad():
@@ -268,7 +265,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             else:
                 ordinal_mask = (cd_probs >= probs)
 
-            if self.args.use_vord == 'VCD':
+            if self.args.algo == 'VCD':
                 vord_logits = (2 * logits - cd_logits)
 
             else:
@@ -282,7 +279,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             vord_loss = criterion(vord_logits, shift_labels)
             vord_loss = vord_loss.sum() / num_items_in_batch if num_items_in_batch else vord_loss.mean()
 
-            if self.args.use_vord == "VORD" or self.args.use_vord == "VCD":
+            if self.args.algo == "VORD" or self.args.algo == "VCD":
                 loss = vord_loss
             
             self.state.num_violations = ordinal_mask.float().sum()

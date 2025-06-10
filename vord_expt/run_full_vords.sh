@@ -13,18 +13,18 @@ MODELS=(
 )
 
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
-USE_VORD_BOOLS=("BASE" "VORD")
+ALGORITHMS=("BASE" "VORD")
 PSI=0
 SEED=42
 for MODEL in "${MODELS[@]}"
 do 
   for NOISE in 500
   do
-    for USE_VORD in "${USE_VORD_BOOLS[@]}"
+    for ALGO in "${ALGORITHMS[@]}"
     do
       # Extract the model name for the output directory
       MODEL_BASENAME=$(basename "$MODEL")
-      MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-${USE_VORD}-${NOISE}-${SEED}"
+      MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-${ALGO}-${NOISE}-${SEED}"
       MODEL_DIR="./checkpoints/$MODEL_NAME"
       LOGGING_DIR="./runs/$MODEL_NAME"
 
@@ -51,7 +51,7 @@ do
           --eval_datasets MMStar \
           --deepspeed zero2 \
           --add_version False \
-          --use_vord $USE_VORD \
+          --algo $ALGO \
           --noise $NOISE \
           --report_to tensorboard
 
@@ -75,7 +75,7 @@ done
 for MODEL in "${MODELS[@]}"
 do 
   MODEL_BASENAME=$(basename "$MODEL")
-  MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-${USE_VORD}-${NOISE}-v2"
+  MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-${ALGO}-${NOISE}-${SEED}"
   MODEL_DIR="./checkpoints/$MODEL_NAME"
   cat ${MODEL_DIR}/checkpoint-9662/eval_result.jsonl
 done

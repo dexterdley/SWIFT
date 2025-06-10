@@ -1,19 +1,21 @@
 MODELS=(
-  "AI-ModelScope/paligemma-3b-pt-224"
+  #"AI-ModelScope/paligemma-3b-pt-224"
+  #"llava-hf/llava-1.5-7b-hf"
+  "llava-hf/llava-v1.6-mistral-7b-hf"
   #"AI-ModelScope/paligemma2-3b-pt-224"
   #"deepseek-ai/deepseek-vl-7b-chat"
 )
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
-USE_VORD_BOOLS=("BASE")
+ALGORITHMS=("BASE" "VORD")
 PSI=0
 
 for MODEL in "${MODELS[@]}"
 do
-  for USE_VORD in "${USE_VORD_BOOLS[@]}"
+  for ALGO in "${ALGORITHMS[@]}"
   do
       # Extract the model name for the output directory
       MODEL_BASENAME=$(basename "$MODEL")
-      MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-newvord${PSI}-margin-diffusion-debug-mean-vord-${USE_VORD}"
+      MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-newvord${PSI}-margin-diffusion-debug-mean-vord-${ALGO}"
       MODEL_DIR="./checkpoints/$MODEL_NAME"
       LOGGING_DIR="./runs/$MODEL_NAME"
 
@@ -40,7 +42,7 @@ do
           --deepspeed zero2 \
           --max_steps 500 \
           --full_determinism True\
-          --use_vord $USE_VORD \
+          --algo $ALGO \
           --noise 500 \
           --add_version False
 
@@ -60,6 +62,6 @@ do
   done
 done
 
-MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-newvord${PSI}-margin-diffusion-debug-mean-vord-${USE_VORD}"
+MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-newvord${PSI}-margin-diffusion-debug-mean-vord-${ALGO}"
 MODEL_DIR="./checkpoints/$MODEL_NAME"
 cat ${MODEL_DIR}/checkpoint-500/eval_result.jsonl

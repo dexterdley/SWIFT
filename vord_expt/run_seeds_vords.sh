@@ -13,12 +13,12 @@ MODELS=(
 )
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 
-USE_VORD_BOOLS=("VORD")
+ALGORITHMS=("BASE" "VCD" "VORD")
 SEEDS=(42) # Can add 55 69 back if needed
 NOISE=500
 
 for MODEL in "${MODELS[@]}"; do
-  for USE_VORD in "${USE_VORD_BOOLS[@]}"; do 
+  for ALGO in "${ALGORITHMS[@]}"; do 
     for SEED in "${SEEDS[@]}"; do
       if [[ "$MODEL" == *"paligemma"* ]]; then
         PSI_VALUES=(0)
@@ -31,11 +31,11 @@ for MODEL in "${MODELS[@]}"; do
       for PSI in "${PSI_VALUES[@]}"; do
         # Extract the model name for the output directory
         MODEL_BASENAME=$(basename "$MODEL")
-        MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-${USE_VORD}-${NOISE}"
+        MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-${ALGO}-${NOISE}"
         MODEL_DIR="./checkpoints/$MODEL_NAME"
         LOGGING_DIR="./runs/$MODEL_NAME"
 
-        echo "Training: ${MODEL_NAME}, ${DATASET} with PSI=${PSI}, USE_VORD=${USE_VORD}, SEED=${SEED}"
+        echo "Training: ${MODEL_NAME}, ${DATASET} with PSI=${PSI}, ALGO=${ALGO}, SEED=${SEED}"
 
         CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
         NPROC_PER_NODE=8 \
@@ -58,7 +58,7 @@ for MODEL in "${MODELS[@]}"; do
             --eval_datasets MMStar \
             --deepspeed zero2 \
             --add_version False \
-            --use_vord $USE_VORD \
+            --algo $ALGO \
             --noise $NOISE \
             --report_to "tensorboard" "wandb"
 
@@ -85,9 +85,9 @@ done
 
 # Results collection
 for MODEL in "${MODELS[@]}"; do 
-  for USE_VORD in "${USE_VORD_BOOLS[@]}"; do
+  for ALGO in "${ALGORITHMS[@]}"; do
     MODEL_BASENAME=$(basename "$MODEL")
-    MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord0-margin-diffusion-mask-decode-vord-${USE_VORD}-${SEED}"
+    MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord0-margin-diffusion-mask-decode-vord-${ALGO}-${SEED}"
     MODEL_DIR="./checkpoints/$MODEL_NAME"
     RESULT_FILE="${MODEL_DIR}/checkpoint-19324/eval_result.jsonl"
     

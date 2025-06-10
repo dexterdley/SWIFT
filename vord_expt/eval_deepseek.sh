@@ -4,10 +4,10 @@
 # --model AI-ModelScope/paligemma-3b-pt-224 \
 ################## SWIFT ##################
 
-for MODEL in deepseek-vl-7b-chat-finetune-vord0-margin-diffusion-mask-decode-vord-true-500
+for MODEL in deepseek-vl-7b-chat-finetune-vord0-margin-diffusion-mask-decode-BASE-500-55 deepseek-vl-7b-chat-finetune-vord0-margin-diffusion-mask-decode-VORD-500-55
 do
   
-    MODEL_DIR="./checkpoints/AI-ModelScope/LLaVA-Instruct-150K/${MODEL}/checkpoint-9662/"
+    MODEL_DIR="./checkpoints/AI-ModelScope/LLaVA-Instruct-150K/${MODEL}/checkpoint-28986/"
 
     for DATASET in POPE BLINK HallusionBench MMStar
     do
