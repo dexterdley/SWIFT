@@ -1,12 +1,12 @@
 MODELS=(
   #"AI-ModelScope/paligemma-3b-pt-224"
-  #"llava-hf/llava-1.5-7b-hf"
-  "llava-hf/llava-v1.6-mistral-7b-hf"
+  "llava-hf/llava-1.5-7b-hf"
+  #"AI-ModelScope/llava-v1.6-mistral-7b"
   #"AI-ModelScope/paligemma2-3b-pt-224"
   #"deepseek-ai/deepseek-vl-7b-chat"
 )
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
-ALGORITHMS=("BASE" "VORD")
+ALGORITHMS=("BASE")
 PSI=0
 
 for MODEL in "${MODELS[@]}"
@@ -40,13 +40,13 @@ do
           --eval_limit 100 \
           --eval_datasets MMStar \
           --deepspeed zero2 \
-          --max_steps 500 \
+          --max_steps 100 \
           --full_determinism True\
           --algo $ALGO \
           --noise 500 \
           --add_version False
 
-      CKPT_DIR="${MODEL_DIR}/checkpoint-500/"
+      CKPT_DIR="${MODEL_DIR}/checkpoint-100/"
       for TESTSET in MME #RealWorldQA
       do
         echo "EVALUATING: ${CKPT_DIR}, ${TESTSET} $BACKBONE"
@@ -64,4 +64,4 @@ done
 
 MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-newvord${PSI}-margin-diffusion-debug-mean-vord-${ALGO}"
 MODEL_DIR="./checkpoints/$MODEL_NAME"
-cat ${MODEL_DIR}/checkpoint-500/eval_result.jsonl
+cat ${MODEL_DIR}/checkpoint-100/eval_result.jsonl
