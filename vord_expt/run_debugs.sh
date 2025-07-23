@@ -1,12 +1,12 @@
 MODELS=(
-  #"AI-ModelScope/paligemma-3b-pt-224"
-  "llava-hf/llava-1.5-7b-hf"
+  "AI-ModelScope/paligemma-3b-pt-224"
+  #"llava-hf/llava-1.5-7b-hf"
   #"AI-ModelScope/llava-v1.6-mistral-7b"
   #"AI-ModelScope/paligemma2-3b-pt-224"
   #"deepseek-ai/deepseek-vl-7b-chat"
 )
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
-ALGORITHMS=("BASE")
+ALGORITHMS=("VORD")
 PSI=0
 
 for MODEL in "${MODELS[@]}"
@@ -32,21 +32,21 @@ do
           --gradient_checkpointing True \
           --output_dir "$MODEL_DIR" \
           --num_train_epochs 1 \
-          --eval_steps 1000 \
+          --eval_steps 500 \
           --save_steps 4000 \
           --power $PSI \
           --sim_margin True \
           --logging_dir "$LOGGING_DIR" \
-          --eval_limit 100 \
+          --eval_limit 500 \
           --eval_datasets MMStar \
           --deepspeed zero2 \
-          --max_steps 100 \
+          --max_steps 500 \
           --full_determinism True\
-          --algo $ALGO \
+          --algo "$ALGO" \
           --noise 500 \
           --add_version False
 
-      CKPT_DIR="${MODEL_DIR}/checkpoint-100/"
+      CKPT_DIR="${MODEL_DIR}/checkpoint-500/"
       for TESTSET in MME #RealWorldQA
       do
         echo "EVALUATING: ${CKPT_DIR}, ${TESTSET} $BACKBONE"
@@ -64,4 +64,4 @@ done
 
 MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-newvord${PSI}-margin-diffusion-debug-mean-vord-${ALGO}"
 MODEL_DIR="./checkpoints/$MODEL_NAME"
-cat ${MODEL_DIR}/checkpoint-100/eval_result.jsonl
+cat ${MODEL_DIR}/checkpoint-500/eval_result.jsonl

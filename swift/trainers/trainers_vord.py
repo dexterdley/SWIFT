@@ -265,7 +265,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             else:
                 ordinal_mask = (cd_probs >= probs)
 
-            if self.args.algo == 'VCD':
+            if self.args.algo == "VCD":
                 vord_logits = (2 * logits - cd_logits)
 
             else:
@@ -273,11 +273,11 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
                 min_per_position = logits.min(dim=-1, keepdim=True)[0]
                 vord_logits = logits.clone()
                 vord_logits[ordinal_mask] = (ordinal_mask * min_per_position)[ordinal_mask]
-
-            vord_logits = vord_logits[:, :-1, :][mask]
-            shift_labels = labels[:, 1:][mask]
-            vord_loss = criterion(vord_logits, shift_labels)
-            vord_loss = vord_loss.sum() / num_items_in_batch if num_items_in_batch else vord_loss.mean()
+                
+                vord_logits = vord_logits[:, :-1, :][mask]
+                shift_labels = labels[:, 1:][mask]
+                vord_loss = criterion(vord_logits, shift_labels)
+                vord_loss = vord_loss.sum() / num_items_in_batch if num_items_in_batch else vord_loss.mean()
 
             if self.args.algo == "VORD" or self.args.algo == "VCD":
                 loss = vord_loss
