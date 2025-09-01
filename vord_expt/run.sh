@@ -7,6 +7,8 @@ SIZE="3b"
 #--model AI-ModelScope/llava-onevision-qwen2-0.5b-ov-hf \
 MODEL="AI-ModelScope/paligemma-3b-pt-224"
 
+DATASET="AI-ModelScope/LLaVA-Instruct-150K"
+
 for PSI in 1
 do
     MODEL_NAME="AI-ModelScope/${MODEL}_${PSI}-debug"
@@ -17,7 +19,7 @@ do
     CUDA_VISIBLE_DEVICES=1\
     swift sft_vord \
         --model $MODEL \
-        --dataset AI-ModelScope/LLaVA-Instruct-150K \
+        --dataset "$DATASET" \
         --torch_dtype bfloat16 \
         --per_device_train_batch_size 8 \
         --per_device_eval_batch_size 8 \

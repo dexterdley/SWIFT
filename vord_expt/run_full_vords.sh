@@ -1,9 +1,13 @@
 #!/bin/bash
+export MASTER_PORT=29515
+
 ################## SWIFT ##################
 # --model deepseek-ai/deepseek-vl-7b-chat \
 # --model swift/llava-v1.6-vicuna-7b-hf \
 # --model AI-ModelScope/paligemma-3b-pt-224 \
 ################## SWIFT ##################
+
+echo "Starting training with MASTER_PORT: $MASTER_PORT"
 
 MODELS=(
   "AI-ModelScope/paligemma-3b-pt-224"
@@ -12,7 +16,7 @@ MODELS=(
 )
 
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
-ALGORITHMS=("BASE" "VORD")
+ALGORITHMS=("VISA")
 PSI=0
 SEED=42
 for MODEL in "${MODELS[@]}"
@@ -43,7 +47,6 @@ do
           --eval_steps 1000 \
           --save_steps 5000 \
           --power $PSI \
-          --seed $SEED \
           --sim_margin True \
           --logging_dir "$LOGGING_DIR" \
           --eval_limit 100 \

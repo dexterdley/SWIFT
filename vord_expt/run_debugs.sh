@@ -1,3 +1,8 @@
+#!/bin/bash
+export MASTER_PORT=29515
+
+echo "Starting training with MASTER_PORT: $MASTER_PORT"
+
 MODELS=(
   "AI-ModelScope/paligemma-3b-pt-224"
   #"llava-hf/llava-1.5-7b-hf"
@@ -5,6 +10,7 @@ MODELS=(
   #"AI-ModelScope/paligemma2-3b-pt-224"
   #"deepseek-ai/deepseek-vl-7b-chat"
 )
+
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 ALGORITHMS=("VORD")
 PSI=0
@@ -21,8 +27,8 @@ do
 
       echo "Training: ${MODEL_NAME}, ${DATASET} with PSI=${PSI}"
 
-      CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
-      NPROC_PER_NODE=8 \
+      CUDA_VISIBLE_DEVICES=0,1 \
+      NPROC_PER_NODE=2 \
       swift sft_vord \
           --model "$MODEL" \
           --dataset "$DATASET" \

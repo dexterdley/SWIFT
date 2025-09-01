@@ -24,7 +24,7 @@ from .torchacc_mixin import TorchAccMixin
 
 criterion = nn.CrossEntropyLoss(reduction='none')
 cosine_sim = nn.CosineSimilarity(dim=1, eps=1e-6)
-eps = -1e6
+eps = 1e-8
 
 def compute_entropy(target_probs, pred_probs, mask=None):
     if mask != None:
@@ -54,11 +54,6 @@ def add_diffusion_noise(image_tensor, noise_step):
     noisy_image = image_tensor.clone()
     image_tensor_cd = q_x(noisy_image, noise_step)
     return image_tensor_cd
-
-def gaussian_noise(x, bound=0.01):
-    lam = torch.distributions.Beta(1,1).sample((x.shape[0], 1, 1, 1)).to(x.device)
-    noise_img = torch.randn_like(x) * torch.rand(1).to(x.device) * bound
-    return lam * x + (1 - lam) * noise_img
 
 class TrainerVORD(SwiftMixinVORD, HfTrainer):
     args: TrainingArguments
@@ -218,7 +213,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
         # Here
         images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=int(self.args.noise))
         cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
-        
+
         with torch.no_grad():
             cd_outputs = model(**cd_inputs)
             if self.args.sim_margin:
@@ -255,32 +250,32 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             loss = outputs['loss'] if isinstance(outputs, dict) else outputs[0]
 
             # Here
-            mask = (labels[:, 1:] != -100)
             logits, cd_logits = outputs['logits'], cd_outputs['logits']
-            probs, cd_probs = F.softmax(logits, -1).detach(), F.softmax(cd_logits, -1).detach()
+            probs, cd_probs = F.softmax(logits, -1), F.softmax(cd_logits, -1)
 
             if self.args.sim_margin: # VORD term: (P(y|v̂, x) >= P(y|v, x) + m)
                 margin = angular_similarity_margin.unsqueeze(1).unsqueeze(1)
-                ordinal_mask = (cd_probs >= (probs + margin).clamp(max=1)).bool()
+                ordinal_mask = (cd_probs >= (probs + margin).clamp(max=1))
 
             else:
-                ordinal_mask = (cd_probs >= probs).bool()
+                ordinal_mask = (cd_probs >= probs)
 
             if self.args.algo == "VCD":
                 vord_logits = (2 * logits - cd_logits)
 
             else:
                 # Apply VORD and compute loss
-                min_per_position = logits.min(dim=-1, keepdim=True)[0].detach()
+                mask = (labels[:, 1:] != -100)
+                min_per_position = logits.min(dim=-1, keepdim=True)[0]
                 vord_logits = logits.clone()
                 vord_logits[ordinal_mask] = (ordinal_mask * min_per_position)[ordinal_mask]
-                
+
                 vord_logits = vord_logits[:, :-1, :][mask]
                 shift_labels = labels[:, 1:][mask]
                 vord_loss = criterion(vord_logits, shift_labels)
                 vord_loss = vord_loss.sum() / num_items_in_batch if num_items_in_batch else vord_loss.mean()
 
-            if self.args.algo == "VORD" or self.args.algo == "VCD":
+            if self.args.algo in ["VORD", "VCD", "VISA"]:
                 loss = vord_loss
             
             self.state.num_violations = ordinal_mask.float().sum()
