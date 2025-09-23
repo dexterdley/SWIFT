@@ -275,11 +275,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
                 vord_loss = criterion(vord_logits, shift_labels)
                 vord_loss = vord_loss.sum() / num_items_in_batch if num_items_in_batch else vord_loss.mean()
 
-                # maybe take out
-                penalty_loss = F.relu(cd_probs - (probs + margin).clamp(max=1)).pow(2)
-                penalty_loss = penalty_loss[:, :-1, :][mask]
-                penalty_loss = penalty_loss.sum() / num_items_in_batch if num_items_in_batch else penalty_loss.mean()
-                vord_loss += penalty_loss
+                
 
             if self.args.algo in ["VORD", "VCD", "VISA"]:
                 loss = vord_loss
