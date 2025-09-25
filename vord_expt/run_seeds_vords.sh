@@ -39,7 +39,7 @@ for MODEL in "${MODELS[@]}"; do
 
         CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
         NPROC_PER_NODE=8 \
-        swift sft_vord \
+        swift sft-vord \
             --model "$MODEL" \
             --dataset "$DATASET" \
             --torch_dtype bfloat16 \

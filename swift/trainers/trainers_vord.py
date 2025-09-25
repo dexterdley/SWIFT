@@ -275,12 +275,6 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
                 vord_loss = criterion(vord_logits, shift_labels)
                 vord_loss = vord_loss.sum() / num_items_in_batch if num_items_in_batch else vord_loss.mean()
 
-                # maybe take out
-                penalty_loss = F.relu(cd_probs - (probs + margin).clamp(max=1)).pow(2)
-                penalty_loss = penalty_loss[:, :-1, :][mask]
-                penalty_loss = penalty_loss.sum() / num_items_in_batch if num_items_in_batch else penalty_loss.mean()
-                vord_loss += penalty_loss
-
             if self.args.algo in ["VORD", "VCD", "VISA"]:
                 loss = vord_loss
             
@@ -288,8 +282,6 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             self.state.signal_noise_ratio = (~ordinal_mask * probs).sum(-1).mean()/(ordinal_mask * probs).sum(-1).mean() #Signal-noise ratio
             self.state.xent_loss = outputs['loss']
             self.state.vord_loss = vord_loss
-            # self.state.ordinal_ent = compute_entropy(cd_probs[:, :-1, :][mask], probs[:, :-1, :][mask]) #want them to be far
-            # self.state.ent_probs = compute_entropy(probs[:, :-1, :][mask], probs[:, :-1, :][mask])
 
             if self.args.sim_margin:
                 self.state.margin = angular_similarity_margin.unsqueeze(1).mean()
