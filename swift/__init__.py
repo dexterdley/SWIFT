@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from .trainers import (EvaluationStrategy, FSDPOption, HPSearchBackend, HubStrategy, IntervalStrategy,
                            SchedulerType, ShardedDDPOption, TrainingArguments, Seq2SeqTrainingArguments, Trainer,
                            Seq2SeqTrainer)
+    from .trainers_vord import TrainerVORD
     from .utils import get_logger
 else:
     _import_structure = {
@@ -39,6 +40,7 @@ else:
             'TrainingArguments',
             'Seq2SeqTrainingArguments',
             'Trainer',
+            'TrainerVORD',
             'Seq2SeqTrainer',
         ],
         'utils': ['get_logger']

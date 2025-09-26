@@ -17,7 +17,7 @@ do
     echo "Training ${MODEL_NAME}"
 
     CUDA_VISIBLE_DEVICES=1\
-    swift sft \
+    swift sft-vord \
         --model $MODEL \
         --dataset "$DATASET" \
         --torch_dtype bfloat16 \

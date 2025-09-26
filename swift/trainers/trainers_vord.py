@@ -267,8 +267,9 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
                 # Apply VORD and compute loss
                 mask = (labels[:, 1:] != -100)
                 min_per_position = logits.min(dim=-1, keepdim=True)[0]
-                vord_logits = logits.clone()
-                vord_logits[ordinal_mask] = (ordinal_mask * min_per_position)[ordinal_mask]
+                # vord_logits = logits.clone()
+                # vord_logits[ordinal_mask] = (ordinal_mask * min_per_position)[ordinal_mask]
+                vord_logits = torch.log(probs + eps) - torch.log(cd_probs + eps)
 
                 vord_logits = vord_logits[:, :-1, :][mask]
                 shift_labels = labels[:, 1:][mask]
