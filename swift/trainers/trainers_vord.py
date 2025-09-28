@@ -24,13 +24,68 @@ from .torchacc_mixin import TorchAccMixin
 
 criterion = nn.CrossEntropyLoss(reduction='none')
 cosine_sim = nn.CosineSimilarity(dim=1, eps=1e-6)
-eps = 1e-8
+eps = 1e-6
 
 def compute_entropy(target_probs, pred_probs, mask=None):
     if mask != None:
         return -torch.sum(target_probs * torch.log( pred_probs.clamp(1e-4) ) , dim=-1)[mask].mean()
     else:
         return -torch.sum(target_probs * torch.log( pred_probs.clamp(1e-4) ) , dim=-1).mean()
+
+# To up DPO
+# https://github.com/modelscope/ms-swift/issues/2597
+# https://github.com/modelscope/ms-swift/issues/4169
+
+# To vet
+def quantize_to_nbit(tensor, bits=4):
+    """
+    Simple n-bit quantization
+    """
+    # Calculate the number of levels for n-bit quantization
+    levels = 2 ** bits - 1
+    
+    # Scale to [0, levels] range for n-bit
+    min_val = tensor.min()
+    max_val = tensor.max()
+    
+    # Normalize to [0, 1]
+    normalized = (tensor - min_val) / (max_val - min_val + 1e-8)
+    
+    # Quantize to n-bit (0 to levels)
+    quantized = (normalized * levels).round()
+    
+    # Dequantize back to original range
+    dequantized = (quantized / levels) * (max_val - min_val) + min_val
+    
+    return dequantized
+
+def quantize_to_nbit(tensor, bits=4, mode='uniform'):
+    """
+    n-bit quantization with different modes
+    
+    Args:
+        tensor: Input tensor to quantize
+        bits: Number of bits (2-8)
+        mode: 'uniform' or 'symmetric'
+    """
+    levels = 2 ** bits - 1
+    
+    if mode == 'uniform':
+        # Uniform quantization (default)
+        min_val = tensor.min()
+        max_val = tensor.max()
+        normalized = (tensor - min_val) / (max_val - min_val + 1e-8)
+        quantized = (normalized * levels).round()
+        dequantized = (quantized / levels) * (max_val - min_val) + min_val
+        
+    elif mode == 'symmetric':
+        # Symmetric quantization (preserves zero)
+        abs_max = tensor.abs().max()
+        normalized = tensor / (abs_max + 1e-8)
+        quantized = (normalized * levels).round()
+        dequantized = (quantized / levels) * abs_max
+    
+    return dequantized
 
 def add_diffusion_noise(image_tensor, noise_step):
     num_steps = 1000  # Number of diffusion steps
@@ -54,6 +109,44 @@ def add_diffusion_noise(image_tensor, noise_step):
     noisy_image = image_tensor.clone()
     image_tensor_cd = q_x(noisy_image, noise_step)
     return image_tensor_cd
+
+
+def add_noise_to_input_ids(input_ids, noise_type="random_mask", noise_level=0.1):
+    """
+    Add noise to input_ids tensor
+    
+    Args:
+        input_ids: Tensor of shape [batch_size, seq_len]
+        noise_type: Type of noise to add ("random_mask", "token_dropout", "token_replacement")
+        noise_level: Probability/level of noise to apply
+    """
+
+    special_tokens = [257152, 0, 1, 2]  # Your special token IDs    
+    noisy_input_ids = input_ids.clone()
+    
+    # Create mask for tokens that are NOT special tokens
+    non_special_mask = torch.ones_like(input_ids, dtype=torch.bool)
+    for special_id in special_tokens:
+        non_special_mask = non_special_mask & (input_ids != special_id)
+    
+    if noise_type == "random_mask":
+        # Randomly mask tokens with [MASK] token or special token
+        mask_prob = torch.rand_like(input_ids.float()) < noise_level
+        final_mask = mask_prob & non_special_mask
+        noisy_input_ids[final_mask] = 0  # mask token
+        
+    elif noise_type == "token_replacement":
+        # Replace tokens with random tokens from vocabulary
+        mask_prob = torch.rand_like(input_ids.float()) < noise_level
+        vocab_size = 257152  # Adjust based on your model's vocabulary size
+        random_tokens = torch.randint(0, vocab_size, input_ids.shape, device=input_ids.device)
+        final_mask = mask_prob & non_special_mask
+        noisy_input_ids[final_mask] = random_tokens[final_mask]
+    
+    else:
+        pass
+    
+    return noisy_input_ids
 
 class TrainerVORD(SwiftMixinVORD, HfTrainer):
     args: TrainingArguments
@@ -212,7 +305,13 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
 
         # Here
         images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=int(self.args.noise))
+        #cd_inputs['pixel_values'] = quantize_to_4bit(inputs['pixel_values']).to(torch.bfloat16)
         cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
+
+        input_ids_cd = add_noise_to_input_ids(cd_inputs['input_ids'], 
+                                            noise_type="random_mask", #random mask works better
+                                            noise_level=0.1)
+        cd_inputs['input_ids'] = input_ids_cd
 
         with torch.no_grad():
             cd_outputs = model(**cd_inputs)
@@ -267,14 +366,16 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
                 # Apply VORD and compute loss
                 mask = (labels[:, 1:] != -100)
                 min_per_position = logits.min(dim=-1, keepdim=True)[0]
-                # vord_logits = logits.clone()
-                # vord_logits[ordinal_mask] = (ordinal_mask * min_per_position)[ordinal_mask]
-                vord_logits = torch.log(probs + eps) - torch.log(cd_probs + eps)
+                vord_logits = logits.clone()
+                vord_logits[ordinal_mask] = (ordinal_mask * min_per_position)[ordinal_mask]
 
                 vord_logits = vord_logits[:, :-1, :][mask]
                 shift_labels = labels[:, 1:][mask]
                 vord_loss = criterion(vord_logits, shift_labels)
                 vord_loss = vord_loss.sum() / num_items_in_batch if num_items_in_batch else vord_loss.mean()
+
+                # diff = cd_probs - (probs + margin).clamp(max=1)
+                # vord_loss += F.relu(diff).sum(2).mean()
 
             if self.args.algo in ["VORD", "VCD", "VISA"]:
                 loss = vord_loss

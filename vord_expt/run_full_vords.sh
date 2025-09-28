@@ -19,6 +19,7 @@ DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 ALGORITHMS=("VISA")
 PSI=0
 SEED=42
+
 for MODEL in "${MODELS[@]}"
 do 
   for NOISE in 500
