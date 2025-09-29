@@ -6,8 +6,8 @@ SIZE="3b"
 #--model swift/llava-v1.6-vicuna-7b-hf \
 #--model AI-ModelScope/llava-onevision-qwen2-0.5b-ov-hf \
 MODEL="AI-ModelScope/paligemma2-3b-pt-224"
-
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
+ALGORITHMS=("VISA")
 
 for PSI in 1
 do
@@ -28,5 +28,6 @@ do
         --num_train_epochs 1 \
         --save_steps 1000 \
         --logging_dir ./runs/$MODEL_NAME \
+        --algo $ALGORITHMS \
         --gradient_checkpointing_kwargs '{"use_reentrant": false}'
 done

@@ -31,11 +31,7 @@ def compute_entropy(target_probs, pred_probs, mask=None):
         return -torch.sum(target_probs * torch.log( pred_probs.clamp(1e-4) ) , dim=-1)[mask].mean()
     else:
         return -torch.sum(target_probs * torch.log( pred_probs.clamp(1e-4) ) , dim=-1).mean()
-
-# To up DPO
-# https://github.com/modelscope/ms-swift/issues/2597
-# https://github.com/modelscope/ms-swift/issues/4169
-
+        
 # To vet
 def quantize_to_nbit(tensor, bits=4):
     """
@@ -305,14 +301,15 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
 
         # Here
         images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=int(self.args.noise))
-        #cd_inputs['pixel_values'] = quantize_to_4bit(inputs['pixel_values']).to(torch.bfloat16)
-        cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
+        cd_inputs['pixel_values'] = quantize_to_nbit(inputs['pixel_values']).to(torch.bfloat16)
+        # cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
 
+        """
         input_ids_cd = add_noise_to_input_ids(cd_inputs['input_ids'], 
                                             noise_type="random_mask", #random mask works better
                                             noise_level=0.1)
         cd_inputs['input_ids'] = input_ids_cd
-
+        """
         with torch.no_grad():
             cd_outputs = model(**cd_inputs)
             if self.args.sim_margin:
@@ -361,6 +358,18 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
 
             if self.args.algo == "VCD":
                 vord_logits = (2 * logits - cd_logits)
+
+            elif self.args.algo == "VISA":
+                IW_weights = (probs + eps).log() - (cd_probs + eps).log()
+
+                # Apply VISA and compute loss
+                mask = (labels[:, 1:] != -100)
+                vord_logits = IW_weights * logits.clone()
+
+                vord_logits = vord_logits[:, :-1, :][mask]
+                shift_labels = labels[:, 1:][mask]
+                vord_loss = criterion(vord_logits, shift_labels)
+                vord_loss = vord_loss.sum() / num_items_in_batch if num_items_in_batch else vord_loss.mean()
 
             else:
                 # Apply VORD and compute loss
