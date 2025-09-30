@@ -21,20 +21,20 @@ PSI=0
 SEED=42
 
 for MODEL in "${MODELS[@]}"
-do 
+do
   for NOISE in 500
   do
     for ALGO in "${ALGORITHMS[@]}"
     do
       # Extract the model name for the output directory
       MODEL_BASENAME=$(basename "$MODEL")
-      MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-quantized-${ALGO}-${NOISE}-${SEED}"
+      MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-triplet-${ALGO}-${NOISE}-${SEED}"
       MODEL_DIR="./checkpoints/$MODEL_NAME"
       LOGGING_DIR="./runs/$MODEL_NAME"
 
       echo "Training: ${MODEL_NAME}, ${DATASET} with PSI=${PSI}"
 
-      CUDA_VISIBLE_DEVICES=4,5,6,7 \
+      CUDA_VISIBLE_DEVICES=0,1,6,7\
       NPROC_PER_NODE=4 \
       swift sft-vord \
           --model "$MODEL" \

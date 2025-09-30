@@ -11,8 +11,10 @@ logger = get_logger()
 
 class TrainerFactoryVORD:
     TRAINER_MAPPING = {
-        'causal_lm': 'swift.trainers.trainers_vord.Seq2SeqTrainerVORD',
-        'seq_cls': 'swift.trainers.trainers_vord.TrainerVORD',
+        #'causal_lm': 'swift.trainers.trainers_vord.Seq2SeqTrainerVORD',
+        #'seq_cls': 'swift.trainers.trainers_vord.TrainerVORD',
+        'causal_lm': 'swift.trainers.trainers_vord_triplet.Seq2SeqTrainerVORD',
+        'seq_cls': 'swift.trainers.trainers_vord_triplet.TrainerVORD',
         'dpo': 'swift.trainers.trainers_vord.DPOTrainer',
         'orpo': 'swift.trainers.trainers_vord.ORPOTrainer',
         'kto': 'swift.trainers.trainers_vord.KTOTrainer',

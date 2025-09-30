@@ -26,6 +26,11 @@ criterion = nn.CrossEntropyLoss(reduction='none')
 cosine_sim = nn.CosineSimilarity(dim=1, eps=1e-6)
 eps = 1e-6
 
+
+# Modify at swift/__init__.py
+# Modify at swift/trainers/__intit__.py
+# Modify at trainer_factory_vord.py
+
 def compute_entropy(target_probs, pred_probs, mask=None):
     if mask != None:
         return -torch.sum(target_probs * torch.log( pred_probs.clamp(1e-4) ) , dim=-1)[mask].mean()
@@ -52,6 +57,34 @@ def quantize_to_nbit(tensor, bits=4):
     
     # Dequantize back to original range
     dequantized = (quantized / levels) * (max_val - min_val) + min_val
+    
+    return dequantized
+
+def quantize_to_nbit(tensor, bits=4, mode='uniform'):
+    """
+    n-bit quantization with different modes
+    
+    Args:
+        tensor: Input tensor to quantize
+        bits: Number of bits (2-8)
+        mode: 'uniform' or 'symmetric'
+    """
+    levels = 2 ** bits - 1
+    
+    if mode == 'uniform':
+        # Uniform quantization (default)
+        min_val = tensor.min()
+        max_val = tensor.max()
+        normalized = (tensor - min_val) / (max_val - min_val + 1e-8)
+        quantized = (normalized * levels).round()
+        dequantized = (quantized / levels) * (max_val - min_val) + min_val
+        
+    elif mode == 'symmetric':
+        # Symmetric quantization (preserves zero)
+        abs_max = tensor.abs().max()
+        normalized = tensor / (abs_max + 1e-8)
+        quantized = (normalized * levels).round()
+        dequantized = (quantized / levels) * abs_max
     
     return dequantized
 
@@ -240,11 +273,14 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
 
         outputs = model(**inputs)
         cd_inputs = {}
+        q_inputs = {}
         for key, value in inputs.items():
             if isinstance(value, torch.Tensor):
                 cd_inputs[key] = value.clone()
+                q_inputs[key] = value.clone()
             else:
                 cd_inputs[key] = value
+                q_inputs[key] = value
 
         # Save past state if it exists
         # TODO: this needs to be fixed and made cleaner later.
@@ -275,8 +311,17 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
         images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=int(self.args.noise))
         cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
 
+        q_inputs['pixel_values'] = quantize_to_nbit(inputs['pixel_values']).to(torch.bfloat16)
+
+        """
+        input_ids_cd = add_noise_to_input_ids(cd_inputs['input_ids'], 
+                                            noise_type="random_mask", #random mask works better
+                                            noise_level=0.1)
+        cd_inputs['input_ids'] = input_ids_cd
+        """
         with torch.no_grad():
             cd_outputs = model(**cd_inputs)
+            q_outputs = model(**q_inputs)
             if self.args.sim_margin:
                 clean_feats = ViT(inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
                 cd_feats = ViT(cd_inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
@@ -290,6 +335,7 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
                 angular_similarity_margin = torch.acos(cosine_similarity) / torch.tensor(np.pi).to(cosine_similarity.device)
 
                 if "deepseek-vl" in self.args.logging_dir and len(angular_similarity_margin) > BS:  # For deepseek high and low heads
+                    # angular_similarity_margin = (angular_similarity_margin[:BS] + angular_similarity_margin[BS:]) / 2
                     angular_similarity_margin = angular_similarity_margin[BS:] #use siglip head
 
                 elif len(angular_similarity_margin) > BS:
@@ -310,8 +356,8 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             loss = outputs['loss'] if isinstance(outputs, dict) else outputs[0]
 
             # Here
-            logits, cd_logits = outputs['logits'], cd_outputs['logits']
-            probs, cd_probs = F.softmax(logits, -1), F.softmax(cd_logits, -1)
+            logits, cd_logits, q_logits = outputs['logits'], cd_outputs['logits'], q_outputs['logits']
+            probs, cd_probs, q_probs = F.softmax(logits, -1), F.softmax(cd_logits, -1), F.softmax(q_logits, -1)
 
             if self.args.sim_margin: # VORD term: (P(y|v̂, x) >= P(y|v, x) + m)
                 margin = angular_similarity_margin.unsqueeze(1).unsqueeze(1)
@@ -335,6 +381,11 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
                 vord_loss = criterion(vord_logits, shift_labels)
                 vord_loss = vord_loss.sum() / num_items_in_batch if num_items_in_batch else vord_loss.mean()
 
+                sim_pos = cosine_sim(logits, q_logits)  # similarity with quantized
+                sim_neg = cosine_sim(logits, cd_logits)
+
+                vord_loss += F.relu(sim_neg - sim_pos + margin).mean()
+
             else:
                 # Apply VORD and compute loss
                 mask = (labels[:, 1:] != -100)
@@ -346,6 +397,9 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
                 shift_labels = labels[:, 1:][mask]
                 vord_loss = criterion(vord_logits, shift_labels)
                 vord_loss = vord_loss.sum() / num_items_in_batch if num_items_in_batch else vord_loss.mean()
+
+                # diff = cd_probs - (probs + margin).clamp(max=1)
+                # vord_loss += F.relu(diff).sum(2).mean()
 
             if self.args.algo in ["VORD", "VCD", "VISA"]:
                 loss = vord_loss
