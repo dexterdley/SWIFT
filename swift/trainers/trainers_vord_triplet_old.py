@@ -24,7 +24,7 @@ from .torchacc_mixin import TorchAccMixin
 
 criterion = nn.CrossEntropyLoss(reduction='none')
 cosine_sim = nn.CosineSimilarity(dim=1, eps=1e-6)
-eps = 1e-3
+eps = 1e-6
 
 
 # Modify at swift/__init__.py
@@ -273,11 +273,14 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
 
         outputs = model(**inputs)
         cd_inputs = {}
+        q_inputs = {}
         for key, value in inputs.items():
             if isinstance(value, torch.Tensor):
                 cd_inputs[key] = value.clone()
+                q_inputs[key] = value.clone()
             else:
                 cd_inputs[key] = value
+                q_inputs[key] = value
 
         # Save past state if it exists
         # TODO: this needs to be fixed and made cleaner later.
@@ -308,14 +311,17 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
         images_cd = add_diffusion_noise(inputs['pixel_values'], noise_step=int(self.args.noise))
         cd_inputs['pixel_values'] = images_cd.to(torch.bfloat16)
 
-        #input_ids_cd = add_noise_to_input_ids(cd_inputs['input_ids'], 
-        #                                    noise_type="random_mask", #random mask works better
-        #                                    noise_level=0.1)
-        #cd_inputs['input_ids'] = input_ids_cd
+        q_inputs['pixel_values'] = quantize_to_nbit(inputs['pixel_values']).to(torch.bfloat16)
 
+        """
+        input_ids_cd = add_noise_to_input_ids(cd_inputs['input_ids'], 
+                                            noise_type="random_mask", #random mask works better
+                                            noise_level=0.1)
+        cd_inputs['input_ids'] = input_ids_cd
+        """
         with torch.no_grad():
             cd_outputs = model(**cd_inputs)
-
+            q_outputs = model(**q_inputs)
             if self.args.sim_margin:
                 clean_feats = ViT(inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
                 cd_feats = ViT(cd_inputs['pixel_values'].squeeze(1).to(torch.bfloat16))
@@ -350,8 +356,8 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
             loss = outputs['loss'] if isinstance(outputs, dict) else outputs[0]
 
             # Here
-            logits, cd_logits = outputs['logits'], cd_outputs['logits']
-            probs, cd_probs = F.softmax(logits, -1), F.softmax(cd_logits, -1)
+            logits, cd_logits, q_logits = outputs['logits'], cd_outputs['logits'], q_outputs['logits']
+            probs, cd_probs, q_probs = F.softmax(logits, -1), F.softmax(cd_logits, -1), F.softmax(q_logits, -1)
 
             if self.args.sim_margin: # VORD term: (P(y|v̂, x) >= P(y|v, x) + m)
                 margin = angular_similarity_margin.unsqueeze(1).unsqueeze(1)
@@ -364,34 +370,32 @@ class Seq2SeqTrainerVORD(TorchAccMixin, SwiftMixinVORD, HfSeq2SeqTrainer):
                 vord_logits = (2 * logits - cd_logits)
 
             elif self.args.algo == "VISA":
+                IW_weights = (probs + eps).log() - (cd_probs + eps).log()
 
                 # Apply VISA and compute loss
                 mask = (labels[:, 1:] != -100)
-                min_per_position = logits.min(dim=-1, keepdim=True)[0]
-                vord_logits = logits.clone()
-                vord_logits[ordinal_mask] = (ordinal_mask * min_per_position)[ordinal_mask]
+                vord_logits = IW_weights * logits.clone()
 
                 vord_logits = vord_logits[:, :-1, :][mask]
                 shift_labels = labels[:, 1:][mask]
-                
-                IW_weights = (cd_probs + eps).log() - (probs + eps).log()
-                IW_weights = IW_weights[:, :-1, :][mask].mean(0).detach()
-                
+                #vord_loss = criterion(vord_logits, shift_labels)
+                #vord_loss = vord_loss.sum() / num_items_in_batch if num_items_in_batch else vord_loss.mean()
+
+                sim_pos = cosine_sim(logits, q_logits)  # similarity with quantized
+                sim_neg = cosine_sim(logits, cd_logits)
+
+                triplet_weights = F.relu(sim_neg - sim_pos + margin).sum(1).mean(0).detach()
+
                 vord_loss = F.cross_entropy(
                             vord_logits, 
-                            shift_labels,
-                            weight=IW_weights.clamp(min=1),
+                            shift_labels, 
+                            weight=triplet_weights,
                             reduction='none'
                             )
                 vord_loss = vord_loss.sum() / num_items_in_batch if num_items_in_batch else vord_loss.mean()
-                ''' #can try
-                vord_loss = criterion(vord_logits, shift_labels)
-                vord_loss = vord_loss.sum() / num_items_in_batch if num_items_in_batch else vord_loss.mean()
 
-                diff = cd_probs - (probs + margin).clamp(max=1)
-                vord_loss += F.relu(diff[:, :-1, :][mask]).sum(-1).mean()
-                '''
-                
+                # pdb.set_trace()
+
             else:
                 # Apply VORD and compute loss
                 mask = (labels[:, 1:] != -100)

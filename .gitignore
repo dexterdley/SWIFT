@@ -153,3 +153,4 @@ ast_index_file.py
 
 trainers_vord_v2.py
 trainers_vord_pid.py
+trainers_vord_triplet_old.py

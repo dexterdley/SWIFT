@@ -5,7 +5,7 @@ SIZE="3b"
 #--model deepseek-ai/deepseek-vl-7b-chat \
 #--model swift/llava-v1.6-vicuna-7b-hf \
 #--model AI-ModelScope/llava-onevision-qwen2-0.5b-ov-hf \
-MODEL="AI-ModelScope/paligemma2-3b-pt-224"
+MODEL="AI-ModelScope/paligemma-3b-pt-224"
 DATASET="AI-ModelScope/LLaVA-Instruct-150K"
 ALGORITHMS=("VISA")
 

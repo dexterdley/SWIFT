@@ -28,14 +28,14 @@ do
     do
       # Extract the model name for the output directory
       MODEL_BASENAME=$(basename "$MODEL")
-      MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-triplet-${ALGO}-${NOISE}-${SEED}"
+      MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-penalty-${ALGO}-${NOISE}-${SEED}"
       MODEL_DIR="./checkpoints/$MODEL_NAME"
       LOGGING_DIR="./runs/$MODEL_NAME"
 
       echo "Training: ${MODEL_NAME}, ${DATASET} with PSI=${PSI}"
 
-      CUDA_VISIBLE_DEVICES=0,1,6,7\
-      NPROC_PER_NODE=4 \
+      CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7\
+      NPROC_PER_NODE=8 \
       swift sft-vord \
           --model "$MODEL" \
           --dataset "$DATASET" \
@@ -59,7 +59,8 @@ do
           --report_to tensorboard
 
       CKPT_DIR="${MODEL_DIR}/checkpoint-9662/"
-      for TESTSET in MME POPE BLINK HallusionBench MMStar
+      # CKPT_DIR="${MODEL_DIR}/checkpoint-19324/"
+      for TESTSET in MME POPE BLINK HallusionBench #MMStar
       do
         echo "EVALUATING: ${CKPT_DIR}, ${TESTSET} $BACKBONE"
 
@@ -78,7 +79,7 @@ done
 for MODEL in "${MODELS[@]}"
 do 
   MODEL_BASENAME=$(basename "$MODEL")
-  MODEL_NAME="${DATASET}/${MODEL_BASENAME}-finetune-vord${PSI}-margin-diffusion-mask-decode-${ALGO}-${NOISE}-${SEED}"
   MODEL_DIR="./checkpoints/$MODEL_NAME"
   cat ${MODEL_DIR}/checkpoint-9662/eval_result.jsonl
+  #cat ${MODEL_DIR}/checkpoint-19324/eval_result.jsonl
 done
